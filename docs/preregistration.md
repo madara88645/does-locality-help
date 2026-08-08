@@ -92,6 +92,43 @@ explicit that PC and CHL degrade with depth, and this experiment is deliberately
 shallow regime where they are documented to work — which is exactly why it cannot support a
 general claim.
 
+## Amendment 1 — adding a second protocol, before the comparison was run
+
+The task-incremental protocol above was run first, with backprop, and produced a **floor
+effect**: average forgetting of 0.07 percentage points, with all three rules at 98.36%
+accuracy. There is nothing to compare.
+
+The cause is structural, not a bug. Each task has its own head, and the shared trunk learns
+generic stroke features that transfer between digit pairs, so the tasks barely interfere.
+This is consistent with van de Ven & Tolias's own point that task-incremental Split-MNIST is
+close to solved; catastrophic forgetting lives in the harder settings.
+
+A null result from this protocol would be *uninformative* — null because the benchmark has
+no signal, not because the rules behave alike. So a second protocol is added:
+
+**Domain-incremental** — a *single shared output head* for all five tasks. Each task still
+maps its two digits to labels 0/1, but now every task writes to the same output units, so
+they interfere directly. Task identity is not given at test time.
+
+Measured with backprop, same settings, before any rule comparison:
+
+| protocol | ACC | forgetting |
+|---|---|---|
+| task-incremental (5 heads) | 98.36% | 0.07 pp |
+| domain-incremental (1 shared head) | 57.64% | **51.00 pp** |
+
+Depth is unchanged, so this stays in the shallow regime where PC and CHL are documented to
+work — the reason the original protocol was chosen. Only the interference between tasks
+increases.
+
+**Both protocols are reported.** The task-incremental floor effect is a result in its own
+right and is not dropped. The domain-incremental protocol is where the comparison between
+rules can actually carry information. Everything else — architecture, learning rate, epochs,
+seeds, the identical-tuning-budget rule — is unchanged.
+
+This amendment was written and committed before the three-rule comparison was run. The
+`--protocol` flag in `experiments/run_continual_comparison.py` selects between them.
+
 ## Stopping rule
 
 The results table is generated once, from `experiments/run_continual_comparison.py`, with

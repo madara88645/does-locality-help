@@ -5,9 +5,58 @@ From-scratch implementations of **Contrastive Hebbian Learning** (Xie & Seung, 2
 published theorems that relate them to backpropagation, and then used to run one small,
 controlled continual-learning comparison against backprop on Split-MNIST.
 
-> **Status: work in progress.** The implementation and equivalence tests come first; the
-> continual-learning results are not in yet. This README will not claim a result before
-> there is one.
+## Result
+
+On domain-incremental Split-MNIST, with an identical tuning budget and 3 seeds:
+
+| rule | final accuracy | forgetting | joint-training ceiling |
+|---|---|---|---|
+| backprop | 57.90% ±0.42 | 50.59 pp ±0.67 | 89.75% |
+| predictive coding | 57.90% ±0.42 | 50.59 pp ±0.67 | 89.75% |
+| contrastive Hebbian | 58.03% ±0.36 | **50.35 pp ±0.75** | 89.84% |
+
+![forgetting curves](results/forgetting_curves_domain.png)
+
+**The local learning rules forget just as much as backpropagation.** With 51 percentage
+points of forgetting available to separate them, CHL differs from backprop by 0.24 pp
+against a seed-to-seed standard deviation of 0.7 — indistinguishable.
+
+Two things this result is *not*:
+
+- **PC matching backprop exactly is a validation, not a finding.** Under the fixed
+  prediction assumption predictive coding computes literally the same gradient (verified to
+  2.8e-16), so identical forgetting is the expected outcome and confirms the implementation
+  is correct. Reporting it as evidence about biology would be circular.
+- **This does not show that the brain's mechanisms do not help.** What was swapped is the
+  *credit assignment* mechanism, holding everything else fixed. Replay, neuromodulation,
+  sparsity and structural plasticity — all things brains have and this experiment does not —
+  are untouched. The claim is narrow: locality of the learning rule, on its own, buys
+  nothing against catastrophic forgetting here.
+
+The originally pre-registered **task-incremental** protocol is also reported, and produced a
+floor effect: forgetting of −0.03 pp ±0.22, with all three rules at 98.4% and the joint
+ceiling (98.15%) no better than sequential training. Separate heads plus transferable stroke
+features mean the tasks barely interfere, so that protocol cannot separate the rules at all.
+It is kept because "this benchmark has no signal" is itself worth recording. See Amendment 1
+in [`docs/preregistration.md`](docs/preregistration.md).
+
+### Scope of the claim
+
+On this architecture, on Split-MNIST, in these two settings, with an identical tuning
+budget, these rules forgot this much. Nothing about depth, other datasets,
+class-incremental settings, or language models. PC and CHL are documented to degrade with
+depth, and this experiment deliberately stays in the shallow regime where they work — which
+is exactly why it cannot support a general claim.
+
+### Reproduce
+
+```bash
+uv sync --extra dev
+uv run python experiments/run_continual_comparison.py --protocol domain
+uv run python experiments/run_continual_comparison.py --protocol task
+```
+
+CPU only, a few minutes total.
 
 ## What this is / is not
 
