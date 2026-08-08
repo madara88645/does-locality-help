@@ -82,11 +82,22 @@ class LayeredNet(nn.Module):
 
     # ------------------------------------------------------------------ helpers
 
-    def _act(self, k: int, z: torch.Tensor) -> torch.Tensor:
+    def act(self, k: int, z: torch.Tensor) -> torch.Tensor:
         """Transfer function of layer ``k`` (1-indexed, paper convention)."""
         if k == self.L and self.linear_output:
             return z
         return ACTIVATIONS[self.hidden_activation][0](z)
+
+    def act_deriv(self, k: int, y: torch.Tensor) -> torch.Tensor:
+        """``f_k'`` of layer ``k``, expressed in terms of that layer's *output* ``y``.
+
+        Both supported transfer functions have a derivative that is cheap to write this
+        way (``tanh' = 1 - y^2``, ``sigmoid' = y(1 - y)``), which avoids having to keep the
+        pre-activations around.
+        """
+        if k == self.L and self.linear_output:
+            return torch.ones_like(y)
+        return ACTIVATIONS[self.hidden_activation][1](y)
 
     def lr_scale(self, k: int) -> float:
         """The per-layer factor ``gamma^(k-L)`` from the CHL update rule (Eq. 2.8).
@@ -112,7 +123,7 @@ class LayeredNet(nn.Module):
         xs = [x0]
         for i in range(self.L):
             z = xs[-1] @ self.W[i].T + self.b[i]
-            xs.append(self._act(i + 1, z))
+            xs.append(self.act(i + 1, z))
         return xs
 
     # -------------------------------------------------------------- relaxation
@@ -156,14 +167,23 @@ class LayeredNet(nn.Module):
             xs[self.L] = target
 
         free_top = self.L - 1 if target is not None else self.L
+
+        # x_0 is clamped, so layer 1's bottom-up drive never changes. On MNIST that is the
+        # 784x256 matmul — by far the dominant cost — so hoisting it out of the loop is
+        # worth more than every other optimisation here combined.
+        bottom_up_1 = x0 @ self.W[0].T + self.b[0]
+
         steps = 0
         for steps in range(1, n_steps + 1):
             drive = []
             for k in range(1, free_top + 1):
-                z = xs[k - 1] @ self.W[k - 1].T + self.b[k - 1]
+                if k == 1:
+                    z = bottom_up_1
+                else:
+                    z = xs[k - 1] @ self.W[k - 1].T + self.b[k - 1]
                 if k < self.L:
                     z = z + self.gamma * (xs[k + 1] @ self.W[k])
-                drive.append(self._act(k, z))
+                drive.append(self.act(k, z))
 
             delta = 0.0
             for k in range(1, free_top + 1):
@@ -173,6 +193,39 @@ class LayeredNet(nn.Module):
             if delta < tol:
                 break
         return xs, steps
+
+    @classmethod
+    def multi_head(
+        cls,
+        trunk: list[int],
+        head_size: int,
+        n_heads: int,
+        **kwargs,
+    ) -> list["LayeredNet"]:
+        """Build ``n_heads`` networks that **share every trunk parameter** but have their
+        own output layer — the standard task-incremental setup.
+
+        Sharing is by object identity, not by copying: each returned net holds the very
+        same ``Parameter`` objects for the trunk, so the in-place updates the training loop
+        applies to one net are immediately visible to all the others. That is what makes
+        the trunk accumulate across tasks while each head stays private.
+
+        Args:
+            trunk: shared layer widths, e.g. ``[784, 256]``.
+            head_size: width of each private output layer.
+            n_heads: one per task.
+        """
+        sizes = list(trunk) + [head_size]
+        base_seed = kwargs.pop("seed", None)
+        nets = [
+            cls(sizes, seed=None if base_seed is None else base_seed + i, **kwargs)
+            for i in range(n_heads)
+        ]
+        for net in nets[1:]:
+            for i in range(len(trunk) - 1):
+                net.W[i] = nets[0].W[i]
+                net.b[i] = nets[0].b[i]
+        return nets
 
     def settle_both_phases(
         self,
