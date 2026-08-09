@@ -40,6 +40,30 @@ features mean the tasks barely interfere, so that protocol cannot separate the r
 It is kept because "this benchmark has no signal" is itself worth recording. See Amendment 1
 in [`docs/preregistration.md`](docs/preregistration.md).
 
+### Why per-task forgetting is so uneven
+
+Forgetting is far from uniform across tasks — 89.5 pp for 4v5 but only 15.9 pp for 6v7 —
+and the average hides why. `experiments/analyse_forgetting.py` asks which class the *final*
+network assigns to each original digit:
+
+| task | digits | class assigned by the final net | own labels | task accuracy |
+|---|---|---|---|---|
+| 4v5 | 4, 5 | 1, 0 | 0, 1 | **9.2%** (below chance) |
+| 0v1 | 0, 1 | 0, 0 | 0, 1 | 48.8% |
+| 2v3 | 2, 3 | 0, 0 | 0, 1 | 50.1% |
+| 6v7 | 6, 7 | 0, 1 | 0, 1 | **82.9%** |
+
+The network is not retaining a weakened version of each old task. It has collapsed onto the
+last task's decision rule — "does this look more like an 8 or a 9?" — and an old task scores
+well only when its own label assignment happens to *agree* with that rule. 6 resembles 8 and
+7 resembles 9, and both agree, so 6v7 survives. 4 resembles 9 and 5 resembles 8, and both
+disagree, so 4v5 lands below chance: the network is confidently, systematically inverted.
+
+So the 89.5-vs-15.9 spread is not some tasks being more robust than others. Every task was
+overwritten equally; the spread is coincidental label alignment with whatever was trained
+last. Forgetting here is total overwriting plus luck, not graded decay — which also means
+per-task forgetting numbers should not be read as a memory-strength ranking.
+
 ### Scope of the claim
 
 On this architecture, on Split-MNIST, in these two settings, with an identical tuning
