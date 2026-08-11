@@ -1,4 +1,0 @@
-rule,acc_mean,acc_std,forgetting_mean,forgetting_std,joint_mean,per_task_forgetting
-backprop,0.9836,0.0000,0.0007,0.0000,nan,0.0019;0.0005;-0.0005;0.0010
-pc,0.9836,0.0000,0.0007,0.0000,nan,0.0019;0.0005;-0.0005;0.0010
-chl,0.9835,0.0000,0.0003,0.0000,nan,0.0014;0.0000;-0.0005;0.0005
