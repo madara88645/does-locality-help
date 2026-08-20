@@ -1,9 +1,13 @@
-# ForgetLab
+# Does locality help?
+
+**Does a local learning rule forget less than backpropagation?**
 
 A from-scratch implementation of **Contrastive Hebbian Learning** (Xie & Seung, 2003) in
 PyTorch, validated against the published theorem that relates it to backpropagation, and
-then used to run one small, controlled continual-learning comparison against backprop on
-Split-MNIST.
+then used to run one small, pre-registered continual-learning comparison against backprop
+on Split-MNIST.
+
+Short answer: **no.**
 
 ## Result
 

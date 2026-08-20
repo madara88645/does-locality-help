@@ -254,5 +254,5 @@ Note, however, that untying does not destroy learning — it changes the algorit
 the forward weights come to *align* with the random feedback — the network adapts to whatever
 feedback channel it is given. This is a genuinely surprising result and worth citing in the
 README, but it is a **different algorithm proving a different claim**: "still learns" is not
-"equals the backprop gradient". ForgetLab reproduces an exact equivalence theorem, so the
+"equals the backprop gradient". This project reproduces an exact equivalence theorem, so the
 weights stay tied. Feedback Alignment is a v0.2 comparison at most, not a variant of CHL.
