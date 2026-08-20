@@ -1,9 +1,9 @@
 # ForgetLab
 
-From-scratch implementations of **Contrastive Hebbian Learning** (Xie & Seung, 2003) and
-**Predictive Coding** (Whittington & Bogacz, 2017) in PyTorch, validated against the
-published theorems that relate them to backpropagation, and then used to run one small,
-controlled continual-learning comparison against backprop on Split-MNIST.
+A from-scratch implementation of **Contrastive Hebbian Learning** (Xie & Seung, 2003) in
+PyTorch, validated against the published theorem that relates it to backpropagation, and
+then used to run one small, controlled continual-learning comparison against backprop on
+Split-MNIST.
 
 ## Result
 
@@ -12,21 +12,16 @@ On domain-incremental Split-MNIST, with an identical tuning budget and 3 seeds:
 | rule | final accuracy | forgetting | joint-training ceiling |
 |---|---|---|---|
 | backprop | 57.90% ±0.42 | 50.59 pp ±0.67 | 89.75% |
-| predictive coding | 57.90% ±0.42 | 50.59 pp ±0.67 | 89.75% |
 | contrastive Hebbian | 58.03% ±0.36 | **50.35 pp ±0.75** | 89.84% |
 
 ![forgetting curves](results/forgetting_curves_domain.png)
 
-**The local learning rules forget just as much as backpropagation.** With 51 percentage
+**The local learning rule forgets just as much as backpropagation.** With 51 percentage
 points of forgetting available to separate them, CHL differs from backprop by 0.24 pp
 against a seed-to-seed standard deviation of 0.7 — indistinguishable.
 
-Two things this result is *not*:
+One thing this result is *not*:
 
-- **PC matching backprop exactly is a validation, not a finding.** Under the fixed
-  prediction assumption predictive coding computes literally the same gradient (verified to
-  2.8e-16), so identical forgetting is the expected outcome and confirms the implementation
-  is correct. Reporting it as evidence about biology would be circular.
 - **This does not show that the brain's mechanisms do not help.** What was swapped is the
   *credit assignment* mechanism, holding everything else fixed. Replay, neuromodulation,
   sparsity and structural plasticity — all things brains have and this experiment does not —
@@ -34,7 +29,7 @@ Two things this result is *not*:
   nothing against catastrophic forgetting here.
 
 The originally pre-registered **task-incremental** protocol is also reported, and produced a
-floor effect: forgetting of −0.03 pp ±0.22, with all three rules at 98.4% and the joint
+floor effect: forgetting of −0.03 pp ±0.22, with both rules at 98.4% and the joint
 ceiling (98.15%) no better than sequential training. Separate heads plus transferable stroke
 features mean the tasks barely interfere, so that protocol cannot separate the rules at all.
 It is kept because "this benchmark has no signal" is itself worth recording. See Amendment 1
@@ -67,9 +62,9 @@ per-task forgetting numbers should not be read as a memory-strength ranking.
 ### Scope of the claim
 
 On this architecture, on Split-MNIST, in these two settings, with an identical tuning
-budget, these rules forgot this much. Nothing about depth, other datasets,
-class-incremental settings, or language models. PC and CHL are documented to degrade with
-depth, and this experiment deliberately stays in the shallow regime where they work — which
+budget, these two rules forgot this much. Nothing about depth, other datasets,
+class-incremental settings, or language models. CHL is documented to degrade with
+depth, and this experiment deliberately stays in the shallow regime where it works — which
 is exactly why it cannot support a general claim.
 
 ### Reproduce
@@ -84,14 +79,14 @@ CPU only, a few minutes total.
 
 ## What this is / is not
 
-- **Is:** a minimal, tested, readable implementation of two local learning rules, plus a
+- **Is:** a minimal, tested, readable implementation of one local learning rule, plus a
   small pre-registered replication of a specific literature claim.
 - **Is not:** a new method, a SOTA result, or a general-purpose library. There is no claim
   here that biologically-motivated learning rules are better than backprop at anything.
 
 ## Why it exists
 
-Predictive coding accounts of the brain stress that cortex learns **continuously and
+Accounts of the brain stress that cortex learns **continuously and
 locally** from an ongoing sensory stream, while a language model is trained **offline and
 globally** by backpropagation and cannot absorb a new example without disturbing its
 weights. That contrast is usually stated qualitatively. This repository turns one narrow
@@ -100,19 +95,16 @@ do what their theorems say, then check whether they actually forget differently.
 
 ## The narrow claim
 
-A minimal, tested, PyTorch-native implementation of Contrastive Hebbian Learning and
-Predictive Coding, validated against their published equivalence theorems, used to run a
-controlled task-incremental continual-learning comparison against backprop.
+A minimal, tested, PyTorch-native implementation of Contrastive Hebbian Learning,
+validated against its published equivalence theorem, used to run a controlled
+continual-learning comparison against backprop.
 
 Existing CHL code is embedded in large cognitive architectures
 ([Leabra/GeneRec](https://github.com/emer/leabra),
 [PsyNeuLink](https://princetonuniversity.github.io/PsyNeuLink/ContrastiveHebbianMechanism.html)),
 hardware-specific ([Vivilux](https://github.com/NeuroSumbaD/Vivilux)), a single-paper
 research script ([Dual-Propagation](https://github.com/Rasmuskh/Dual-Propagation)), or dead
-single-file demos. Existing PC libraries are JAX-based
-([pcx](https://github.com/liukidar/pcx), [jpc](https://github.com/thebuckleylab/jpc)) or
-`nn.Sequential`-only ([Torch2PC](https://github.com/RobertRosenbaum/Torch2PC)). None of them
-run this comparison.
+single-file demos. None of them run this comparison.
 
 That is the whole claim. It is *not* "no CHL implementation exists" — that is false, and
 the repos above are why.
@@ -125,8 +117,6 @@ the repos above are why.
 | [PsyNeuLink](https://princetonuniversity.github.io/PsyNeuLink/ContrastiveHebbianMechanism.html) | Princeton's cognitive-modelling toolkit, actively maintained, ships a first-class `ContrastiveHebbianMechanism`. | Modelling framework, not a PyTorch trainer; no equivalence-to-backprop test suite. |
 | [Vivilux](https://github.com/NeuroSumbaD/Vivilux) | CHL on simulated photonic hardware. Actively maintained. | Hardware-specific. |
 | [Dual-Propagation](https://github.com/Rasmuskh/Dual-Propagation) | An accelerated CHL variant using dyadic neurons (JAX/Julia). | A faster formulation. This repo implements the original 2003 equations deliberately, because the point is to test *that* theorem — pedagogical clarity over speed. |
-| [Bogacz-Group/PredictiveCoding](https://github.com/Bogacz-Group/PredictiveCoding) | The Oxford lab's PC library + tutorial notebooks. Best place to learn PC. | Reference for correctness here, not a dependency. |
-| [Torch2PC](https://github.com/RobertRosenbaum/Torch2PC) | PyTorch PC, companion to Rosenbaum's divergence analysis. | `nn.Sequential`-only, stale since Feb 2024, no CHL. |
 | [Lillicrap et al. 2016](https://www.nature.com/articles/ncomms13276) | Feedback Alignment: random fixed feedback weights still support learning, because the forward weights align to them. | A different algorithm proving a different claim. "Still learns" is not "equals the backprop gradient", so the weights here stay tied. |
 
 ## Honest statement of the theorem's cost
@@ -144,7 +134,7 @@ CHL's `γ` is not Equilibrium Propagation's `β`.
 ```
 docs/limits.md      which theorem needs which limit and which assumption
 forgetlab/layers.py the shared layered network with tied, weak feedback
-forgetlab/rules/    backprop (reference), predictive coding, CHL
+forgetlab/rules/    backprop (reference), CHL
 forgetlab/metrics.py per-layer gradient alignment
 tests/              the equivalence anchors
 ```

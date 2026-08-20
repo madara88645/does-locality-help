@@ -1,7 +1,7 @@
 [project]
 name = "forgetlab"
 version = "0.1.0"
-description = "From-scratch contrastive Hebbian learning and predictive coding in PyTorch, validated against their published equivalence theorems, used to compare forgetting against backprop."
+description = "From-scratch contrastive Hebbian learning in PyTorch, validated against its published equivalence theorem, used to compare forgetting against backprop."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

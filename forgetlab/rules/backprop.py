@@ -27,8 +27,8 @@ def backprop_updates(
 ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
     """Return ``(dW, db)`` — the weight changes to **add**, i.e. the descent direction.
 
-    These are ``-dLoss/dW``, so they are directly comparable to what ``chl_updates`` and
-    ``pc_updates`` return.  Multiply by a learning rate and add.
+    These are ``-dLoss/dW``, so they are directly comparable to what ``chl_updates``
+    returns.  Multiply by a learning rate and add.
     """
     for p in list(net.W) + list(net.b):
         if p.grad is not None:

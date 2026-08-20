@@ -1,7 +1,7 @@
 """Split-MNIST: do local learning rules forget differently from backprop?
 
-Settings are fixed by ``docs/preregistration.md`` and are identical for all three rules.
-No rule gets its own tuning pass.
+Settings are fixed by ``docs/preregistration.md`` and are identical for both rules.
+Neither rule gets its own tuning pass.
 
 Two protocols, both reported (see Amendment 1 in the pre-registration)::
 
@@ -9,7 +9,7 @@ Two protocols, both reported (see Amendment 1 in the pre-registration)::
     uv run python experiments/run_continual_comparison.py --protocol domain
 
 ``task`` is the originally pre-registered setting and produces a floor effect — almost no
-forgetting for any rule, so it cannot separate them. ``domain`` shares a single output head
+forgetting for either rule, so it cannot separate them. ``domain`` shares a single output head
 across the five tasks, which makes them interfere and is where the comparison has signal.
 """
 
@@ -27,7 +27,7 @@ from forgetlab.layers import LayeredNet
 from forgetlab.metrics import average_accuracy, average_forgetting, per_task_forgetting
 from forgetlab.train import accuracy, train
 
-RULES = ["backprop", "pc", "chl"]
+RULES = ["backprop", "chl"]
 SETTLE = dict(n_steps=64, dt=0.5, tol=1e-8)
 RESULTS = Path("results")
 
@@ -192,12 +192,11 @@ def _plot(matrices, args, suffix: str) -> None:
     fig, (left, right) = plt.subplots(1, 2, figsize=(11, 4.6))
     stages = range(1, 6)
 
-    # The whole point of the result is that the three curves land on top of each other, so
-    # they must stay individually visible: a wide translucent line under two thinner dashed
-    # ones, rather than three opaque lines where only the last drawn is seen.
+    # The whole point of the result is that the two curves land on top of each other, so
+    # they must stay individually visible: a wide translucent line under a thinner dashed
+    # one, rather than two opaque lines where only the last drawn is seen.
     style = {
         "backprop": dict(linestyle="-", marker="o", linewidth=5, alpha=0.35),
-        "pc": dict(linestyle="--", marker="s", linewidth=2, markersize=5),
         "chl": dict(linestyle=":", marker="^", linewidth=2, markersize=6),
     }
 

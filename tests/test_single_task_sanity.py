@@ -51,19 +51,10 @@ def _run(rule, data):
     return accuracy(net, x_test, y_test)
 
 
-@pytest.mark.parametrize("rule", ["backprop", "pc", "chl"])
+@pytest.mark.parametrize("rule", ["backprop", "chl"])
 def test_rule_learns(rule, data):
-    """Well clear of the 10% chance floor, under a budget shared by all three rules."""
+    """Well clear of the 10% chance floor, under a budget shared by both rules."""
     assert _run(rule, data) > 0.80
-
-
-def test_pc_tracks_backprop_through_a_whole_training_run(data):
-    """Exactness is not just a one-batch property.
-
-    The fixed-prediction assumption makes PC's update *identical* to backprop's, so the two
-    should follow the same trajectory for an entire run, not merely start at the same place.
-    """
-    assert abs(_run("pc", data) - _run("backprop", data)) < 0.02
 
 
 def test_chl_stays_close_to_backprop(data):

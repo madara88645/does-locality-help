@@ -1,4 +1,4 @@
-"""ForgetLab — contrastive Hebbian learning and predictive coding, from scratch."""
+"""ForgetLab — contrastive Hebbian learning from scratch, measured against backprop."""
 
 from forgetlab.layers import LayeredNet
 
