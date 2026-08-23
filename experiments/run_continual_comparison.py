@@ -109,12 +109,21 @@ def main() -> None:
     p.add_argument("--trunk", type=int, nargs="+", default=[784, 256])
     p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     p.add_argument("--protocol", choices=["task", "domain"], default="domain")
+    p.add_argument("--rules", nargs="+", choices=RULES, default=RULES,
+                   help="which rules to run; backprop is gamma-independent, so a "
+                        "gamma sweep only needs chl")
     p.add_argument("--skip-joint", action="store_true")
     args = p.parse_args()
 
     torch.set_default_dtype(torch.float32)
     RESULTS.mkdir(exist_ok=True)
+    # The pre-registered run is gamma=0.1 and owns the plain filenames; anything else
+    # is an exploratory sweep and must not overwrite it.
     suffix = args.protocol
+    if args.gamma != 0.1:
+        suffix += f"_gamma{args.gamma:g}"
+    if list(args.rules) != RULES:
+        suffix += "_" + "-".join(args.rules)
 
     tasks = load_split_mnist(train_per_task=args.train_per_task)
     print(f"Split-MNIST, {args.protocol}-incremental. Settings from docs/preregistration.md.")
@@ -124,7 +133,7 @@ def main() -> None:
           f"gamma={args.gamma} trunk={args.trunk} seeds={args.seeds}\n")
 
     rows, matrices = [], {}
-    for rule in RULES:
+    for rule in args.rules:
         accs, forgets, per_task, joints = [], [], [], []
         for seed in args.seeds:
             start = time.time()
@@ -200,7 +209,7 @@ def _plot(matrices, args, suffix: str) -> None:
         "chl": dict(linestyle=":", marker="^", linewidth=2, markersize=6),
     }
 
-    for rule in RULES:
+    for rule in args.rules:
         seen, first = [], []
         for stage in range(5):
             per_seed_seen, per_seed_first = [], []
