@@ -17,6 +17,28 @@ them and prints the evidence.
        frozen random hidden layer and a trained output layer, which would be a
        random-features model rather than feedback alignment.
 
+Naming — this is NOT feedback alignment, and must not be labelled as such.
+
+    Lillicrap et al. (2016), *Random synaptic feedback weights support error
+    backpropagation for deep learning*, Nature Communications 7:13276, replace ``W^T``
+    in **backprop's backward pass** with a fixed random ``B`` and change nothing else.
+    There is no relaxation, no gamma, and no per-layer scaling. What this file does is
+    different: it changes the *dynamics of a settling network*. Calling it feedback
+    alignment invites the obvious objection that it is not. Call it **untied-feedback
+    CHL**, and cite Lillicrap as prior evidence that a random feedback path does not
+    destroy learning — not as the algorithm being implemented.
+
+    (Recorded 2026-08-23 after reading the wrong Lillicrap 2016: the same author
+    published *Continuous control with deep reinforcement learning* — DDPG — the same
+    year. Cite by title, not by author-year.)
+
+That paper also settles, provisionally, the open question below. Feedback alignment has
+no per-layer compensation factor at all, because it has no attenuation to compensate. So
+there is no precedent for untied CHL inheriting ``gamma^(k-L)``, which was derived for the
+transposed path. Dropping it looks like *defining a different rule* rather than tuning
+one — but that argument has not been checked against the CHL equations themselves, and
+must be before anything here is pre-registered.
+
 Run with::
 
     uv run python experiments/untied_prototype_checks.py
