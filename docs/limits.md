@@ -235,6 +235,49 @@ Check 3 is the strongest. An implementation can sit near backprop by accident; r
 the predicted *rate* is much harder to fake. Measured relative error, layer 1:
 0.0096 → 0.0048 → 0.0024 for γ = 0.02 → 0.01 → 0.005. Exactly linear.
 
+### ⚠️ Measured: how close is CHL to backprop at the γ this project actually uses?
+
+The section above shows the equivalence holds *in the limit*. That is not the same question
+as: at the γ the experiments actually ran with, how different is the update?
+
+Measured on the experiment's own architecture (`784 → 256 → 2`), its settling settings
+(64 steps, `dt = 0.5`, `tol = 1e-8`) and a real Split-MNIST batch — not the tiny float64
+net the equivalence tests use:
+
+| γ | per-layer cosine | per-layer norm ratio |
+|---|---|---|
+| 0.01 | 1.0000, 1.0000 | 0.9995, 0.9997 |
+| 0.1 *(used in every reported run)* | 1.0000, 0.9996 | 0.9956, 0.9976 |
+| 0.3 | 0.9997, 0.9968 | 0.9861, 0.9938 |
+| 0.5 | 0.9990, 0.9910 | 0.9754, 0.9913 |
+
+**This is a limitation of the whole comparison, and it is stated here rather than left for
+a reviewer to find.**
+
+Across the entire range swept — a 50× change in feedback strength — CHL's update stays
+within about 2.5% of backprop's in magnitude and above 0.99 cosine in direction. The
+continual-learning result has to be read against that: two rules computing nearly the same
+update forgot nearly the same amount. The measured update deviation (1–2.5%) and the
+measured forgetting difference (0–1 pp) are consistent with each other, but neither is
+evidence about locality.
+
+So the honest scope of the null result is narrower than "a local learning rule forgets as
+much as backprop". It is:
+
+> A local rule that is *constructed to approximate the backprop gradient*, and measurably
+> does so to within a few percent, also forgets like backprop.
+
+That is a much weaker statement, and close to a corollary of the equivalence theorem rather
+than an independent finding. The experiment cannot separate "locality does not help" from
+"this rule was not different enough from backprop to tell".
+
+**What would make it a real test.** A local rule whose update is *not* engineered to match
+backprop. The obvious candidate is already discussed in the next section: untie the feedback
+weights. Feedback alignment still learns, is still local, and its updates genuinely differ
+from the backprop gradient — so a forgetting comparison against backprop would carry
+information that this one does not. Everything else in the repository (protocols, metrics,
+seeds, pre-registration discipline) transfers unchanged.
+
 ---
 
 ## 5. Why tied weights, and what happens without them
