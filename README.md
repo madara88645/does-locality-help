@@ -75,6 +75,47 @@ The original design compared **three** rules. Predictive coding was dropped afte
 
 CHL's depth sensitivity is not tested in this project — no depth sweep is run here. That it degrades with depth is a premise carried over from the broader local-learning-rules literature this repo builds on, not something verified directly by this repo's own experiments. This experiment deliberately stays in the shallow regime where that literature says CHL works, which is exactly why it cannot speak to depth at all — that gap is part of the scope being disclosed, not an oversight.
 
+## Exploratory follow-ups
+
+Two exploratory studies were run after the pre-registered result was frozen. Both are
+labelled as such, both were committed with their designs and hypotheses before their runs,
+and neither carries confirmatory weight.
+
+- **[γ sweep](docs/exploratory-gamma.md)** — feedback strength varied 50-fold; forgetting
+  moved less than the random choice of initial weights moves it. The sweep also exposed the
+  frozen comparison's scope limit: across the whole range, tied CHL's update stays within
+  ~2.5% of backprop's, so that comparison cannot separate "locality does not help" from
+  "this rule was not different enough from backprop to tell"
+  ([`docs/limits.md`](docs/limits.md)).
+
+- **[Untied feedback](docs/exploratory-untied.md)** — the follow-up that closes that gap:
+  give the top-down path its own *fixed random* matrices instead of the forward weights'
+  transpose. The hidden-layer update's cosine against backprop falls from 0.99998 to 0.025 —
+  a local rule that genuinely computes something else. Result, on 3 seeds: it forgot
+  **45.2 pp vs backprop's 50.6 pp**, at equal per-task attainment and with the highest final
+  accuracy of any arm — but the reduction travels together with a 3–4× drop in trunk
+  plasticity, so it is a hypothesis for a proper pre-registered test, not a finding. What it
+  does establish: change the rule into something genuinely different from backprop and the
+  forgetting numbers move — the frozen null was a statement about closeness to backprop,
+  not about locality.
+
+## Use the implementation
+
+The trainer is deliberately small. To train CHL on your own data:
+
+```python
+from forgetlab.layers import LayeredNet
+from forgetlab.train import accuracy, train
+
+net = LayeredNet([784, 256, 10], gamma=0.1, seed=0)          # tied=False for untied feedback
+train(net, "chl", x_train, y_train, lr=0.1, epochs=10, batch_size=64, seed=0,
+      rule_kwargs=dict(n_steps=64, dt=0.5, tol=1e-8))
+print(accuracy(net, x_test, y_test))
+```
+
+`rule="backprop"` runs the reference rule through the identical training loop, so anything
+you measure differs only by the update rule.
+
 ## Install & reproduce
 
 ```bash

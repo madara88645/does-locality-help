@@ -89,3 +89,58 @@ backprop (cosine 0.025) forgot this much — which the frozen comparison could n
 
 **Could not:** anything about depth, other datasets, other protocols, or local rules in
 general; nor confirmatory weight — the analysis was chosen after the main result was known.
+
+---
+
+# Result
+
+| arm | attainment (first 4) | final accuracy | forgetting | joint ceiling | trunk moved |
+|---|---|---|---|---|---|
+| backprop *(frozen)* | — | 57.90% ±0.42 | 50.59 pp ±0.67 | 89.75% | — |
+| tied CHL *(frozen)* | 98.63% | 58.03% ±0.36 | 50.35 pp ±0.75 | 89.84% | 9.89% |
+| flat-scale control | 98.62% | 59.42% ±0.69 | 48.49 pp ±0.92 | 84.63% | 2.90% |
+| **untied CHL** | 98.45% | **61.79% ±0.87** | **45.21 pp ±1.17** | 87.50% | 2.43% |
+
+*(attainment = accuracy on each task right after training it, mean over the first four —
+`experiments/untied_attainment.py`; trunk movement = relative change of the shared 784→256
+weights over the full sequence, seed 0 — `experiments/untied_trunk_movement.py`.)*
+
+**The working hypothesis missed.** Forgetting did not stay at ~50 pp: the untied arm
+forgot 45.2 pp — about 5 pp less than tied CHL and backprop — and ended the sequence with
+the highest final accuracy of any arm, despite the lowest-but-one joint ceiling.
+
+## The traps, checked
+
+**Trap 1 — cleared.** Attainment is essentially identical across arms (98.45% vs 98.63%).
+The untied arm learned each task as well as the others before moving on, so the reduction
+is not a lower-peak artifact.
+
+**Trap 2 — fired, and it caps the claim.** Both new arms move the shared trunk 3–4×
+less than tied CHL (2.4% / 2.9% vs 9.9%). Less trunk plasticity is a boring, sufficient
+mechanism for less interference, and it is confounded with everything the tied-vs-new
+comparison shows. Two observations survive it, cautiously:
+
+- The control and the untied arm move the trunk almost equally (2.9% vs 2.4%), yet differ
+  by 3.3 pp of forgetting and 2.4 pp of final accuracy — so reduced plasticity alone does
+  not account for the gap *between the two new arms*.
+- The untied arm pairs less forgetting with *more* final accuracy, not with less learning.
+
+**Trap 3 — as expected.** Seed spreads grew (±1.17 vs ±0.75), and everything above rests
+on 3 seeds.
+
+## Honest reading
+
+A local rule that measurably computes something other than the backprop gradient
+(hidden-update cosine 0.025) forgot somewhat less than backprop on this benchmark — but the
+effect is one-tenth of the total forgetting, it travels together with a large reduction in
+trunk plasticity, and the analysis was chosen after the frozen result was known.
+
+This is **a hypothesis generated, not a finding established**: "untied-feedback CHL trades
+trunk plasticity for retention at equal attainment" is now precise enough to pre-register
+properly — more seeds, a plasticity-matched control (e.g. tied CHL with the hidden learning
+rate scaled to match trunk movement), and the prediction written down first.
+
+What it already does establish: the frozen comparison's blind spot was real. Change the
+rule into something genuinely different from backprop and the forgetting numbers move —
+so "CHL forgets like backprop" was indeed a statement about closeness to backprop, not
+about locality.
