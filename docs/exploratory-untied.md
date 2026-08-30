@@ -16,8 +16,10 @@ cosine in direction.
 matrices `B` — drawn once from the same distribution as `W`, never updated — instead of the
 forward weights' transpose. Measured on the experiment's architecture, the hidden-layer
 update's cosine against backprop falls from 0.99998 to **0.0248**
-(`experiments/untied_prototype_checks.py`). This is a local rule that genuinely computes
-something other than the backprop gradient. Does it forget differently?
+(`experiments/untied_prototype_checks.py`); the output layer — clamped straight to the
+target, no feedback in its update, under 0.3% of the parameters — stays at ~0.999 either
+way. Where the parameters live, this rule genuinely computes something other than the
+backprop gradient. Does it forget differently?
 
 **Naming.** This is *not* feedback alignment. Lillicrap et al. 2016 (*Random synaptic
 feedback weights support error backpropagation for deep learning*, Nat Commun 7:13276)
