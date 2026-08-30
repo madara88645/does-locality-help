@@ -75,11 +75,41 @@ The original design compared **three** rules. Predictive coding was dropped afte
 
 CHL's depth sensitivity is not tested in this project — no depth sweep is run here. That it degrades with depth is a premise carried over from the broader local-learning-rules literature this repo builds on, not something verified directly by this repo's own experiments. This experiment deliberately stays in the shallow regime where that literature says CHL works, which is exactly why it cannot speak to depth at all — that gap is part of the scope being disclosed, not an oversight.
 
+## Exploratory follow-ups
+
+Two exploratory studies were run after the pre-registered result was frozen. Both are
+labelled as such, both were committed with their designs and hypotheses before their runs,
+and neither carries confirmatory weight.
+
+- **[γ sweep](docs/exploratory-gamma.md)** — feedback strength varied 50-fold; forgetting
+  moved less than the random choice of initial weights moves it. The sweep also exposed the
+  frozen comparison's scope limit: across the whole range, tied CHL's update stays within
+  ~2.5% of backprop's, so that comparison cannot separate "locality does not help" from
+  "this rule was not different enough from backprop to tell"
+  ([`docs/limits.md`](docs/limits.md)).
+
+- **[Untied feedback](docs/exploratory-untied.md)** — the follow-up that closes that gap:
+  give the top-down path its own *fixed random* matrices instead of the forward weights'
+  transpose. The hidden-layer update's direction now genuinely differs from backprop's
+  (cosine similarity between the two update vectors: 0.99998 tied, 0.025 untied; the output
+  layer, under 0.3% of the parameters, stays aligned either way). Result, on 3 seeds: the
+  untied rule forgot **45.2 pp vs backprop's 50.6 pp**, at essentially equal per-task
+  attainment (accuracy on each task right after training it: 98.45% vs 98.63%) and with the
+  highest final accuracy of any arm. Two caveats cap that, in opposite directions. The
+  reduction travels together with a 3–4× drop in how much the trunk — the shared 784→256
+  hidden weights — moves over the sequence, and less trunk movement is a boring, sufficient
+  mechanism for less interference. But the control arm (tied weights, same missing rescaling
+  factor) moves the trunk almost as little (2.9% vs 2.4%) and still forgets 3.3 pp more than
+  the untied arm, so trunk movement alone does not explain the gap between those two. On 3
+  seeds this is a hypothesis for a proper pre-registered test, not a finding. What it does
+  establish: make the rule genuinely different from backprop and the forgetting numbers
+  move — the frozen null was a statement about closeness to backprop, not about locality.
+
 ## Install & reproduce
 
 ```bash
 uv sync --extra dev
-uv run pytest                                                          # 7 tests, ~7s
+uv run pytest                                                          # 12 tests, ~7s
 uv run python experiments/run_continual_comparison.py --protocol domain
 uv run python experiments/run_continual_comparison.py --protocol task
 uv run python experiments/analyse_forgetting.py                       # the collapse analysis above
@@ -87,6 +117,24 @@ uv run python experiments/animate_settling.py                         # regenera
 ```
 
 CPU only — no GPU required at any point. Tests run in about 7 seconds; the two comparison experiments take a few minutes total.
+
+## Use the implementation
+
+This is not a general-purpose library, but the implementation is small and importable. To
+train CHL on your own data:
+
+```python
+from forgetlab.layers import LayeredNet
+from forgetlab.train import accuracy, train
+
+net = LayeredNet([784, 256, 10], gamma=0.1, seed=0)          # tied=False for untied feedback
+train(net, "chl", x_train, y_train, lr=0.1, epochs=10, batch_size=64, seed=0,
+      rule_kwargs=dict(n_steps=64, dt=0.5, tol=1e-8))
+print(accuracy(net, x_test, y_test))
+```
+
+`rule="backprop"` runs the reference rule through the identical training loop, so anything
+you measure differs only by the update rule.
 
 ## Why it exists
 

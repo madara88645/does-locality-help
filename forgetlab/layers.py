@@ -52,6 +52,7 @@ class LayeredNet(nn.Module):
         gamma: float = 0.1,
         hidden_activation: str = "tanh",
         linear_output: bool = True,
+        tied: bool = True,
         seed: int | None = None,
     ) -> None:
         super().__init__()
@@ -65,6 +66,7 @@ class LayeredNet(nn.Module):
         self.gamma = float(gamma)
         self.hidden_activation = hidden_activation
         self.linear_output = linear_output
+        self.tied = bool(tied)
 
         gen = None
         if seed is not None:
@@ -80,7 +82,33 @@ class LayeredNet(nn.Module):
         self.W = nn.ParameterList(weights)
         self.b = nn.ParameterList(biases)
 
+        # Untied feedback: the top-down path gets its own fixed random matrices instead of
+        # the forward weights' transpose.  Backprop's chain rule *requires* the transpose,
+        # so this is exactly the assumption that makes CHL approximate backprop -- breaking
+        # it is the point.  See Lillicrap et al. 2016 for why learning survives it.
+        #
+        # B is drawn from the same distribution as W so the feedback magnitude is
+        # comparable; a different scale would confound the untying with a change in gamma.
+        # It is never updated: the training loop iterates over W and b only, and
+        # requires_grad=False keeps it out of autograd in backprop_updates too.
+        if not self.tied:
+            feedback = []
+            for i in range(self.L):
+                fan_in, fan_out = sizes[i], sizes[i + 1]
+                bound = 1.0 / math.sqrt(fan_in)
+                m = torch.empty(fan_out, fan_in).uniform_(-bound, bound, generator=gen)
+                feedback.append(nn.Parameter(m, requires_grad=False))
+            self.B = nn.ParameterList(feedback)
+
     # ------------------------------------------------------------------ helpers
+
+    def feedback(self, k: int) -> torch.Tensor:
+        """The matrix the top-down signal travels down, from layer ``k+1`` to layer ``k``.
+
+        Tied (the default, and what every published result in this repo used): the forward
+        weights themselves.  Untied: fixed random weights that ``W`` knows nothing about.
+        """
+        return self.W[k] if self.tied else self.B[k]
 
     def act(self, k: int, z: torch.Tensor) -> torch.Tensor:
         """Transfer function of layer ``k`` (1-indexed, paper convention)."""
@@ -110,6 +138,17 @@ class LayeredNet(nn.Module):
         Dropping it is the single most likely silent bug in this project — the code still
         runs, and deep layers are simply updated exponentially too weakly.
         """
+        if not self.tied:
+            # The factor above compensates an attenuation specific to the *transposed*
+            # feedback path (Eq. 3.3 is derived from W^T).  With untied random feedback
+            # that derivation does not apply, and inheriting the factor anyway amplifies
+            # a nearly-orthogonal update ~1/gamma-fold per layer -- measured, the weights
+            # diverge to NaN (experiments/untied_prototype_checks.py).  The untied rule is
+            # therefore *defined* without per-layer rescaling, matching the convention of
+            # random-feedback learning (Lillicrap et al. 2016, "Random synaptic feedback
+            # weights support error backpropagation for deep learning", Nat Commun
+            # 7:13276), which has no such factor because it has nothing to compensate.
+            return 1.0
         return self.gamma ** (k - self.L)
 
     # ------------------------------------------------------------- forward pass
@@ -182,7 +221,7 @@ class LayeredNet(nn.Module):
                 else:
                     z = xs[k - 1] @ self.W[k - 1].T + self.b[k - 1]
                 if k < self.L:
-                    z = z + self.gamma * (xs[k + 1] @ self.W[k])
+                    z = z + self.gamma * (xs[k + 1] @ self.feedback(k))
                 drive.append(self.act(k, z))
 
             delta = 0.0
@@ -216,6 +255,12 @@ class LayeredNet(nn.Module):
             n_heads: one per task.
         """
         sizes = list(trunk) + [head_size]
+        if not kwargs.get("tied", True):
+            raise NotImplementedError(
+                "multi_head does not share untied feedback matrices across heads yet; "
+                "the untied prototype runs on the domain-incremental protocol, which uses "
+                "a single shared net"
+            )
         base_seed = kwargs.pop("seed", None)
         nets = [
             cls(sizes, seed=None if base_seed is None else base_seed + i, **kwargs)

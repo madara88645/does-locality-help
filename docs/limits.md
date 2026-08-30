@@ -273,10 +273,14 @@ than an independent finding. The experiment cannot separate "locality does not h
 
 **What would make it a real test.** A local rule whose update is *not* engineered to match
 backprop. The obvious candidate is already discussed in the next section: untie the feedback
-weights. Feedback alignment still learns, is still local, and its updates genuinely differ
-from the backprop gradient — so a forgetting comparison against backprop would carry
+weights. Random feedback still supports learning, is still local, and its updates genuinely
+differ from the backprop gradient — so a forgetting comparison against backprop carries
 information that this one does not. Everything else in the repository (protocols, metrics,
 seeds, pre-registration discipline) transfers unchanged.
+
+*This has now been run, as an exploratory follow-up: see
+[`exploratory-untied.md`](exploratory-untied.md). The forgetting numbers do move — which
+confirms that the limitation described here was real.*
 
 ---
 

@@ -32,7 +32,10 @@ SETTLE = dict(n_steps=64, dt=0.5, tol=1e-8)
 RESULTS = Path("results")
 
 
-def build(seed: int, trunk: list[int], gamma: float, protocol: str) -> list[LayeredNet]:
+def build(
+    seed: int, trunk: list[int], gamma: float, protocol: str,
+    untied: bool = False, flat_scale: bool = False,
+) -> list[LayeredNet]:
     """Return the net used for each task, under the chosen protocol.
 
     ``task``   — task-incremental: one private head per task, shared trunk. Task identity
@@ -43,7 +46,12 @@ def build(seed: int, trunk: list[int], gamma: float, protocol: str) -> list[Laye
     if protocol == "task":
         return LayeredNet.multi_head(trunk, head_size=2, n_heads=5, gamma=gamma, seed=seed)
     if protocol == "domain":
-        shared = LayeredNet(list(trunk) + [2], gamma=gamma, seed=seed)
+        shared = LayeredNet(list(trunk) + [2], gamma=gamma, tied=not untied, seed=seed)
+        if flat_scale:
+            # Control arm for the untied comparison: the *tied* rule with the
+            # gamma^(k-L) rescaling switched off.  Isolates the factor itself, so a
+            # difference in the untied arm cannot be blamed on the missing factor.
+            shared.lr_scale = lambda k: 1.0
         return [shared] * 5
     raise ValueError(f"unknown protocol {protocol!r}")
 
@@ -75,7 +83,7 @@ def joint_upper_bound(tasks, rule, args, seed) -> float:
     Not a competitor — a ceiling. It shows how much of any accuracy drop is caused by the
     *sequence*, as opposed to the capacity of the model or the difficulty of the tasks.
     """
-    nets = build(seed, args.trunk, args.gamma, args.protocol)
+    nets = build(seed, args.trunk, args.gamma, args.protocol, args.untied, args.flat_scale)
     kwargs = {} if rule == "backprop" else SETTLE
     gen = torch.Generator().manual_seed(seed)
     steps_per_task = (len(tasks[0].x_train) // args.batch_size) * args.epochs
@@ -113,7 +121,18 @@ def main() -> None:
                    help="which rules to run; backprop is gamma-independent, so a "
                         "gamma sweep only needs chl")
     p.add_argument("--skip-joint", action="store_true")
+    p.add_argument("--untied", action="store_true",
+                   help="untied-feedback CHL: fixed random feedback matrices instead of "
+                        "W^T (exploratory; see docs/exploratory-untied.md)")
+    p.add_argument("--flat-scale", action="store_true",
+                   help="tied CHL with the gamma^(k-L) rescaling off -- the control arm "
+                        "that isolates the factor itself")
     args = p.parse_args()
+    if args.untied or args.flat_scale:
+        if args.protocol != "domain" or list(args.rules) != ["chl"]:
+            raise SystemExit("--untied/--flat-scale: domain protocol and --rules chl only")
+    if args.untied and args.flat_scale:
+        raise SystemExit("--untied and --flat-scale are separate arms; pick one")
 
     torch.set_default_dtype(torch.float32)
     RESULTS.mkdir(exist_ok=True)
@@ -124,6 +143,10 @@ def main() -> None:
         suffix += f"_gamma{args.gamma:g}"
     if list(args.rules) != RULES:
         suffix += "_" + "-".join(args.rules)
+    if args.untied:
+        suffix += "_untied"
+    if args.flat_scale:
+        suffix += "_flatscale"
 
     tasks = load_split_mnist(train_per_task=args.train_per_task)
     print(f"Split-MNIST, {args.protocol}-incremental. Settings from docs/preregistration.md.")
@@ -138,7 +161,7 @@ def main() -> None:
         for seed in args.seeds:
             start = time.time()
             R = accuracy_matrix(
-                build(seed, args.trunk, args.gamma, args.protocol),
+                build(seed, args.trunk, args.gamma, args.protocol, args.untied, args.flat_scale),
                 tasks, rule, args, seed,
             )
             matrices[(rule, seed)] = R

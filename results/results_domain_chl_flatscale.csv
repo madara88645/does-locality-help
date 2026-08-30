@@ -1,0 +1,2 @@
+rule,acc_mean,acc_std,forgetting_mean,forgetting_std,joint_mean,per_task_forgetting
+chl,0.5942,0.0069,0.4849,0.0092,0.8463,0.5228;0.4394;0.8413;0.1361
