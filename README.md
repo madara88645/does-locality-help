@@ -9,8 +9,8 @@ is *how* they learn: every synapse updates from signals available right where it
 whole network, which is what backpropagation does. That story is usually told
 qualitatively. This repository measures it.
 
-**Short answer: no.** In a pre-registered comparison, the local rule forgot exactly as
-much as backprop. **The longer answer is better** — that null turned out to say less than
+**Short answer: no.** In a pre-registered comparison, the local rule forgot just as much
+as backprop. **The longer answer is better** — that null turned out to say less than
 it seemed, and the follow-up it forced produced the most interesting number in the repo.
 
 ## The whole study, in one picture
@@ -24,16 +24,20 @@ flowchart TD
         A --> B["its weight update ≈ backprop's<br/>(cosine 0.99998)"]
         B --> C["forgets the same:<br/>50.4 vs 50.6 pp"]
     end
-    C --> D["⚠️ a rule this close to backprop<br/>cannot test locality"]
+    C --> D["⚠️ the γ sweep's verdict: a rule this close<br/>to backprop cannot test locality"]
     D --> E
     subgraph R2 ["Round 2 — exploratory"]
         E["untie it:<br/>top-down path = γ·B, fixed random, never updated"]
         E --> F["update now genuinely different<br/>(cosine 0.025)"]
-        F --> G["forgets less: 45.2 pp,<br/>with the same per-task learning (98.5%)"]
+        F --> G["forgets less: 45.2 pp,<br/>per-task learning intact (98.45% vs tied's 98.63%)"]
     end
     G --> H["⚠️ but it also moves the shared<br/>weights 3–4× less"]
     H --> V["verdict: a hypothesis worth its own<br/>pre-registered test — not yet a finding"]
 ```
+
+*(CHL = Contrastive Hebbian Learning, the local rule under test; γ = feedback strength;
+pp = percentage points; cosine = direction agreement between the two rules' weight
+updates, 1 = identical, 0 = unrelated. Each is properly introduced below.)*
 
 Everything below unpacks this picture, top to bottom.
 
@@ -45,7 +49,10 @@ before being trusted with any experiment. The benchmark is **Split-MNIST**: hand
 digits, cut into five two-digit tasks (0 vs 1, then 2 vs 3, …), trained strictly in that
 order. *Pre-registered* means the whole design — metrics, seeds, tuning budget, expected
 outcome — was committed before the experiment ran, so nothing could be quietly tuned after
-seeing the numbers.
+seeing the numbers. One honest wrinkle, disclosed up front: the protocol below is the
+*amended* design. The originally pre-registered protocol produced a floor effect — nothing
+to measure — and was replaced by Amendment 1 *before* any rule comparison ran; the full
+story is in the floor-effect subsection further down.
 
 On **domain-incremental** Split-MNIST — a single shared output head for all five tasks, so every task's two digits map to labels 0/1 through the *same* output units and a later task can directly overwrite an earlier one's decision boundary, with task identity never given at test time — with an identical tuning budget and 3 seeds:
 
@@ -69,7 +76,9 @@ One thing this result is *not*:
 ## How CHL learns
 
 Before round 2 makes sense, one picture of the mechanism. CHL trains a network without
-ever running a backward pass — it lets the network *settle*, twice:
+ever running a backward pass — it lets the network *settle*, twice: once with the output
+left alone (the **free phase**), once with the output pinned to the correct answer (the
+**clamped phase**). The difference between the two settled states is the weight update:
 
 ![The two settlings CHL subtracts to get its weight update](results/settling.gif)
 
@@ -202,7 +211,7 @@ It is *not* "no CHL implementation exists" — several do, and they are credited
 | [PsyNeuLink](https://princetonuniversity.github.io/PsyNeuLink/ContrastiveHebbianMechanism.html) | Princeton's cognitive-modelling toolkit, actively maintained, ships a first-class `ContrastiveHebbianMechanism`. | Modelling framework, not a PyTorch trainer; no equivalence-to-backprop test suite. |
 | [Vivilux](https://github.com/NeuroSumbaD/Vivilux) | CHL on simulated photonic hardware. Actively maintained. | Hardware-specific. |
 | [Dual-Propagation](https://github.com/Rasmuskh/Dual-Propagation) | An accelerated CHL variant using dyadic neurons (JAX/Julia). | A faster formulation. This repo implements the original 2003 equations deliberately, because the point is to test *that* theorem — pedagogical clarity over speed. |
-| [Lillicrap et al. 2016](https://www.nature.com/articles/ncomms13276) | Feedback Alignment: random fixed feedback weights still support learning, because the forward weights align to them. | A different algorithm proving a different claim. "Still learns" is not "equals the backprop gradient", so the weights here stay tied. |
+| [Lillicrap et al. 2016](https://www.nature.com/articles/ncomms13276) | Feedback Alignment: random fixed feedback weights still support learning, because the forward weights align to them. | A different algorithm proving a different claim. "Still learns" is not "equals the backprop gradient", so round 1's comparison keeps the weights tied — and round 2's untied arm is this idea transplanted into a settling network. |
 
 ## Honest statement of the theorem's cost
 
@@ -211,6 +220,11 @@ Xie & Seung's equivalence is not free. It requires **infinitesimally weak feedba
 See [`docs/limits.md`](docs/limits.md) for exactly which theorem needs which limit, and why CHL's `γ` is not Equilibrium Propagation's `β`.
 
 ## Layout
+
+The equivalence tests check three independent things — direction (per-layer cosine), scale
+(per-layer norm ratio against the `γ^(k-L)` factor), and the theorem's predicted `O(γ)`
+error rate — because either of the first two alone can pass on a broken implementation
+that silently drops the `γ^(k-L)` term (see [`docs/limits.md`](docs/limits.md)).
 
 ```
 docs/limits.md               which theorem needs which limit — and the measured scope limit
