@@ -32,7 +32,7 @@ flowchart TD
         F --> G["forgets less: 45.2 pp,<br/>per-task learning intact (98.45% vs tied's 98.63%)"]
     end
     G --> H["caveat: it also moves the shared<br/>weights 3 to 4 times less"]
-    H --> V["verdict: a hypothesis that has earned<br/>its own pre-registered test"]
+    H --> V["verdict: a hypothesis that has earned its own<br/>pre-registered test, not yet a finding"]
 ```
 
 *(CHL = Contrastive Hebbian Learning, the local rule under test; γ = feedback strength;
@@ -142,18 +142,18 @@ own fixed random matrices in place of the forward weights' transpose. The hidden
 update now points somewhere else: cosine against backprop's update drops from 0.99998
 (tied) to 0.025 (untied), while the output layer, under 0.3% of the parameters, stays
 aligned either way. On 3 seeds, the untied rule forgot **45.2 pp against backprop's
-50.6 pp**, reached the same level on each task first (98.45% vs 98.63% accuracy right
-after training each task), and finished the sequence with the highest final accuracy of
+50.6 pp**, matched the tied rule on each task right after training it (98.45% vs 98.63%
+accuracy), and finished the sequence with the highest final accuracy of
 any arm.
 
-Two caveats pull in opposite directions. The untied rule also moves the trunk, the shared
+Two caveats cap that number, from opposite directions. The untied rule also moves the trunk, the shared
 784→256 hidden weights, three to four times less over the sequence, and a trunk that
 moves less interferes less for reasons that have nothing to do with credit assignment. On
 the other side sits the control arm: tied weights, same missing rescaling factor. It
 moves the trunk about as little (2.9% against 2.4%) yet forgets 3.3 pp more than the
 untied arm, so trunk movement fails to explain the gap between those two. Three seeds
-settle none of this, and the honest label is a hypothesis that has earned its own
-pre-registered test.
+settle none of this. The honest label is a hypothesis that has earned its own
+pre-registered test, not a finding.
 
 What round 2 does establish: change the rule into something measurably different from
 backprop and the forgetting numbers move. Round 1's null described how close the two
