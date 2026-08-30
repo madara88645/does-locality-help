@@ -2,16 +2,16 @@
 
 **Does a local learning rule forget less than backpropagation?**
 
-Train a neural network on a second task and it bulldozes the first — *catastrophic
-forgetting*. Brains do not seem to suffer from it nearly as badly, and one popular suspect
-is *how* they learn: every synapse updates from signals available right where it is (a
-**local** rule), instead of waiting for an error signal to be routed backward through the
-whole network, which is what backpropagation does. That story is usually told
-qualitatively. This repository measures it.
+Train a network on a second task and it bulldozes the first. The literature calls this
+*catastrophic forgetting*. Brains cope with sequential learning far better, and one
+suspect is the learning rule itself: each synapse in a brain updates from signals
+available at its own two ends (a **local** rule), while backpropagation routes an error
+signal backward through the whole network. That argument circulates in textbooks and blog
+posts without a measurement attached. This repository attaches one.
 
-**Short answer: no.** In a pre-registered comparison, the local rule forgot just as much
-as backprop. **The longer answer is better** — that null turned out to say less than
-it seemed, and the follow-up it forced produced the most interesting number in the repo.
+The pre-registered comparison answered **no**: the local rule forgot as much as backprop.
+Round 2 weakened that answer. The local rule in round 1 turned out to be a near-copy of
+backprop, and a version with the copying removed forgot less.
 
 ## The whole study, in one picture
 
@@ -19,117 +19,151 @@ it seemed, and the follow-up it forced produced the most interesting number in t
 flowchart TD
     Q["The question:<br/>does a local learning rule forget less than backprop?"]
     Q --> A
-    subgraph R1 ["Round 1 — pre-registered"]
+    subgraph R1 ["Round 1 (pre-registered)"]
         A["CHL with tied feedback:<br/>top-down path = γ·Wᵀ, the forward weights' transpose"]
         A --> B["its weight update ≈ backprop's<br/>(cosine 0.99998)"]
         B --> C["forgets the same:<br/>50.4 vs 50.6 pp"]
     end
-    C --> D["⚠️ the γ sweep's verdict: a rule this close<br/>to backprop cannot test locality"]
+    C --> D["the γ sweep's verdict: a rule this close<br/>to backprop cannot test locality"]
     D --> E
-    subgraph R2 ["Round 2 — exploratory"]
+    subgraph R2 ["Round 2 (exploratory)"]
         E["untie it:<br/>top-down path = γ·B, fixed random, never updated"]
-        E --> F["update now genuinely different<br/>(cosine 0.025)"]
+        E --> F["update now differs from backprop's<br/>(cosine 0.025)"]
         F --> G["forgets less: 45.2 pp,<br/>per-task learning intact (98.45% vs tied's 98.63%)"]
     end
-    G --> H["⚠️ but it also moves the shared<br/>weights 3–4× less"]
-    H --> V["verdict: a hypothesis worth its own<br/>pre-registered test — not yet a finding"]
+    G --> H["caveat: it also moves the shared<br/>weights 3 to 4 times less"]
+    H --> V["verdict: a hypothesis that has earned<br/>its own pre-registered test"]
 ```
 
 *(CHL = Contrastive Hebbian Learning, the local rule under test; γ = feedback strength;
 pp = percentage points; cosine = direction agreement between the two rules' weight
-updates, 1 = identical, 0 = unrelated. Each is properly introduced below.)*
+updates, 1 = identical, 0 = unrelated. The sections below define each one in place.)*
 
-Everything below unpacks this picture, top to bottom.
+## Round 1: the pre-registered comparison
 
-## Round 1 — the pre-registered comparison
+The local rule is **Contrastive Hebbian Learning** (CHL; Xie & Seung, 2003). I
+implemented it from scratch in PyTorch and tested it against the published theorem that
+ties it to backprop before trusting it with any experiment. The benchmark is
+**Split-MNIST**: handwritten digits, cut into five two-digit tasks (0 vs 1, then 2 vs 3,
+and so on), trained in that order. Pre-registration means the design went into a commit
+before the experiment ran: metrics, seeds, tuning budget, expected outcome. You cannot
+tune one method harder after seeing the numbers if the numbers come last.
 
-The local rule is **Contrastive Hebbian Learning** (CHL; Xie & Seung, 2003), implemented
-from scratch in PyTorch and verified against the published theorem relating it to backprop
-before being trusted with any experiment. The benchmark is **Split-MNIST**: handwritten
-digits, cut into five two-digit tasks (0 vs 1, then 2 vs 3, …), trained strictly in that
-order. *Pre-registered* means the whole design — metrics, seeds, tuning budget, expected
-outcome — was committed before the experiment ran, so nothing could be quietly tuned after
-seeing the numbers. One honest wrinkle, disclosed up front: the protocol below is the
-*amended* design. The originally pre-registered protocol produced a floor effect — nothing
-to measure — and was replaced by Amendment 1 *before* any rule comparison ran; the full
-story is in the floor-effect subsection further down.
+One wrinkle, stated up front. The protocol below is the amended design. The original
+protocol produced a floor effect, near-zero forgetting for either rule, and Amendment 1
+replaced it before any rule comparison ran. The floor-effect subsection below tells that
+story.
 
-On **domain-incremental** Split-MNIST — a single shared output head for all five tasks, so every task's two digits map to labels 0/1 through the *same* output units and a later task can directly overwrite an earlier one's decision boundary, with task identity never given at test time — with an identical tuning budget and 3 seeds:
+The protocol is **domain-incremental**: one shared output head for all five tasks, so
+each task maps its two digits to labels 0/1 through the same output units, and a later
+task can overwrite an earlier one's decision boundary. The test never reveals which task
+an image came from. Identical tuning budget, 3 seeds:
 
 | rule | final accuracy | forgetting | joint-training ceiling |
 |---|---|---|---|
 | backprop | 57.90% ±0.42 | 50.59 pp ±0.67 | 89.75% |
 | contrastive Hebbian | 58.03% ±0.36 | 50.35 pp ±0.75 | 89.84% |
 
-> *pp = percentage points — a plain subtraction between two accuracies, not a relative percent change.*
-> *Forgetting = for each of the first four tasks, its accuracy right after training that task minus its accuracy once all five are done, averaged across those tasks; positive means forgetting. Same ACC/forgetting formulation as Lopez-Paz & Ranzato's GEM paper — see `forgetlab/metrics.py`.*
-> *Joint-training ceiling = the same network trained on all five tasks shuffled together instead of sequentially — an upper bound on what's achievable here, not a third method being compared.*
+> *pp = percentage points, a plain subtraction between two accuracies, not a relative
+> percent change.*
+> *Forgetting: for each of the first four tasks, take its accuracy right after training
+> that task, subtract its accuracy once all five are done, and average. Positive means
+> forgetting. Same formulation as Lopez-Paz & Ranzato's GEM paper; see
+> `forgetlab/metrics.py`.*
+> *Joint-training ceiling: the same network trained on all five tasks shuffled together
+> instead of sequentially. An upper bound, not a competitor.*
 
 ![forgetting curves](results/forgetting_curves_domain.png)
 
-**The local learning rule forgets just as much as backpropagation.** With roughly 51 percentage points of forgetting available to separate them, CHL differs from backprop by only 0.24 pp — against seed-to-seed standard deviations of 0.67 pp (backprop) and 0.75 pp (CHL), on just 3 seeds. That gap is far smaller than the run-to-run noise: nothing here points to a real difference in either direction.
+**The local rule forgets as much as backpropagation.** The benchmark offers 51 percentage
+points of forgetting to separate the two rules. They land 0.24 pp apart, with seed-to-seed
+standard deviations of 0.67 pp and 0.75 pp. The gap sits inside the noise.
 
-One thing this result is *not*:
-
-- **This does not show that the brain's mechanisms do not help.** What was swapped is the *credit assignment* mechanism — the general problem of figuring out which weights caused an error, so only those get updated — holding everything else fixed. Replay, neuromodulation, sparsity and structural plasticity, all things brains have and this experiment does not, are untouched. The claim is narrow: locality of the learning rule, on its own, buys nothing here against catastrophic forgetting.
+Read the result at its correct size. The experiment swapped one thing, the
+*credit-assignment* mechanism: the machinery that decides which weights caused an error.
+Replay, neuromodulation, sparsity, structural plasticity: brains have all of these, this
+experiment has none of them, and the result says nothing about them. Locality of the
+learning rule, on its own, bought nothing here against catastrophic forgetting.
 
 ## How CHL learns
 
-Before round 2 makes sense, one picture of the mechanism. CHL trains a network without
-ever running a backward pass — it lets the network *settle*, twice: once with the output
-left alone (the **free phase**), once with the output pinned to the correct answer (the
-**clamped phase**). The difference between the two settled states is the weight update:
+Round 2 modifies CHL's feedback path, so first, what that path does. CHL trains a network
+without a backward pass. It settles the network twice: once with the output left alone
+(the **free phase**), once with the output pinned to the correct answer (the **clamped
+phase**). The difference between the two settled states is the weight update:
 
 ![The two settlings CHL subtracts to get its weight update](results/settling.gif)
 
-*The two settlings contrastive Hebbian learning subtracts to get its weight update — free phase vs. clamped phase — and the difference between them stabilising into the actual learning signal. Every frame above is a real `forgetlab.layers.LayeredNet.relax()` call on a tiny 3→4→2 network, not an illustration — captured one Euler step at a time and checked in-script against a direct multi-step `relax()` call. `gamma = 0.3` here only so the settling is visible on a human timescale; the actual experiment above uses `gamma = 0.1`, and the equivalence tests further down push `gamma` toward 0.*
+*Free phase, clamped phase, and their difference stabilising into the learning signal.
+Every frame comes from a real `forgetlab.layers.LayeredNet.relax()` call on a tiny 3→4→2
+network, captured one Euler step at a time and checked in-script against a direct
+multi-step `relax()` call. This picture uses `gamma = 0.3` so the settling is visible at
+human speed; the experiments use `gamma = 0.1`, and the equivalence tests push `gamma`
+toward 0.*
 
-CHL never computes a gradient — it measures one, by settling the network twice and comparing what it finds: first the clamped phase, then the free phase seeded from that clamped fixed point (Xie & Seung §4's prescribed order — see `forgetlab/layers.py`'s `settle_both_phases`). The animation above starts both phases from the same zero state instead, purely so it can show them pulling apart side by side; that is a deliberate simplification for this picture, not how the real training code settles the phases.
+CHL never computes a gradient. It measures one. The real training code settles the
+clamped phase first, then seeds the free phase from that clamped fixed point, the order
+Xie & Seung §4 prescribes (see `settle_both_phases` in `forgetlab/layers.py`). The
+animation starts both phases from the same zero state instead, so you can watch them pull
+apart side by side; the code does not train that way.
 
-- **Free phase** (panel 1) — the input is held fixed, the output is left alone, and the network settles wherever the current weights take it. It does not land on the right answer; nothing has been learned yet.
-- **Clamped phase** (panel 2) — the input *and* the correct answer are both held fixed. Only the hidden units are free, pulled by a `gamma * W^T` feedback path: the forward weights, transposed and scaled down by `gamma`.
-- **The difference** (panel 3) — for each connection, subtract what its two endpoints were doing in the free phase from what they were doing in the clamped phase. Once that difference stops moving, it *is* the weight update — for the output layer, with one example, this is exactly the `db` term in `forgetlab/rules/chl.py`.
+- **Free phase** (panel 1): hold the input fixed, leave the output alone, and the network
+  settles wherever its current weights take it. Nothing has been learned yet, so it lands
+  short of the right answer.
+- **Clamped phase** (panel 2): hold the input *and* the correct answer fixed. Hidden
+  units settle under a `gamma * W^T` feedback path, the forward weights transposed and
+  scaled down by `gamma`.
+- **The difference** (panel 3): for each connection, subtract free-phase activity from
+  clamped-phase activity at its two endpoints. Once that difference stops moving, it *is*
+  the weight update. For the output layer with one example this is the exact `db` term in
+  `forgetlab/rules/chl.py`.
 
-No error signal is ever computed and routed backward through the network. Every weight only ever sees activity local to its own two endpoints — which is what *local* means throughout this README. This repo first checks that the difference above is, in the right limit, mathematically identical to what backpropagation would compute for the same network (`tests/`, [`docs/limits.md`](docs/limits.md)) — then uses it to run the comparison above.
+No error signal travels backward through the network. Each weight sees activity at its
+own two endpoints and nothing else, which is what *local* means throughout this README.
+The test suite checks that this difference matches, in the right limit, what
+backpropagation would compute for the same network (`tests/`,
+[`docs/limits.md`](docs/limits.md)).
 
-## Round 2 — the follow-up the null forced
+## Round 2: exploratory follow-ups
 
-Two exploratory studies came after the frozen result. Both designs and hypotheses were
-committed before their runs, both are labelled exploratory, and neither carries
-confirmatory weight — but this is where the story turns.
+Two exploratory studies followed the frozen result. Each design and hypothesis went into
+a commit before its runs. Neither carries confirmatory weight. Both say more than round 1
+did.
 
-**First, the [γ sweep](docs/exploratory-gamma.md) found the blind spot.**
-Feedback strength was varied 50-fold; forgetting
-moved less than the random choice of initial weights moves it. The sweep also exposed the
-frozen comparison's scope limit: across the whole range, tied CHL's update stays within
-~2.5% of backprop's, so that comparison cannot separate "locality does not help" from
-"this rule was not different enough from backprop to tell"
-([`docs/limits.md`](docs/limits.md)).
+**Step one, the [γ sweep](docs/exploratory-gamma.md).** I varied the feedback strength
+across a 50-fold range. Forgetting moved less than the random choice of initial weights
+moves it. The sweep also produced a more important number: across that whole range, tied
+CHL's update stays within 2.5% of backprop's. Rules that close cannot answer the locality
+question; the round 1 comparison could not separate "locality does not help" from "these
+two rules were near-twins" ([`docs/limits.md`](docs/limits.md)).
 
-**Then [untying the feedback](docs/exploratory-untied.md) closed it.**
-Give the top-down path its own *fixed random* matrices instead of the forward weights'
-transpose. The hidden-layer update's direction now genuinely differs from backprop's
-(cosine similarity between the two update vectors: 0.99998 tied, 0.025 untied; the output
-layer, under 0.3% of the parameters, stays aligned either way). Result, on 3 seeds: the
-untied rule forgot **45.2 pp vs backprop's 50.6 pp**, at essentially equal per-task
-attainment (accuracy on each task right after training it: 98.45% vs 98.63%) and with the
-highest final accuracy of any arm.
+**Step two, [untied feedback](docs/exploratory-untied.md).** I gave the top-down path its
+own fixed random matrices in place of the forward weights' transpose. The hidden-layer
+update now points somewhere else: cosine against backprop's update drops from 0.99998
+(tied) to 0.025 (untied), while the output layer, under 0.3% of the parameters, stays
+aligned either way. On 3 seeds, the untied rule forgot **45.2 pp against backprop's
+50.6 pp**, reached the same level on each task first (98.45% vs 98.63% accuracy right
+after training each task), and finished the sequence with the highest final accuracy of
+any arm.
 
-Two caveats cap that, in opposite directions. The reduction travels together with a 3–4×
-drop in how much the trunk — the shared 784→256 hidden weights — moves over the sequence,
-and less trunk movement is a boring, sufficient mechanism for less interference. But the
-control arm (tied weights, same missing rescaling factor) moves the trunk almost as little
-(2.9% vs 2.4%) and still forgets 3.3 pp more than the untied arm, so trunk movement alone
-does not explain the gap between those two. On 3 seeds this is **a hypothesis for a proper
-pre-registered test, not a finding.**
+Two caveats pull in opposite directions. The untied rule also moves the trunk, the shared
+784→256 hidden weights, three to four times less over the sequence, and a trunk that
+moves less interferes less for reasons that have nothing to do with credit assignment. On
+the other side sits the control arm: tied weights, same missing rescaling factor. It
+moves the trunk about as little (2.9% against 2.4%) yet forgets 3.3 pp more than the
+untied arm, so trunk movement fails to explain the gap between those two. Three seeds
+settle none of this, and the honest label is a hypothesis that has earned its own
+pre-registered test.
 
-What it does establish: make the rule genuinely different from backprop and the forgetting
-numbers move — the frozen null was a statement about closeness to backprop, not about
-locality.
+What round 2 does establish: change the rule into something measurably different from
+backprop and the forgetting numbers move. Round 1's null described how close the two
+rules were to each other. It never reached the question of locality.
 
 ## Why the network forgets: collapse onto the last task's rule
 
-Forgetting is far from uniform across tasks — 89.5 pp for 4v5 but only 15.9 pp for 6v7 in the backprop run (CHL: 89.7 pp and 15.7 pp) — and the average hides why. `experiments/analyse_forgetting.py` trains a single domain-incremental backprop network on the same five-task sequence and asks which class the *final* network assigns to each original digit:
+Forgetting is uneven across tasks: 89.5 pp for 4v5, 15.9 pp for 6v7 in the backprop run
+(CHL: 89.7 and 15.7). The average hides the reason. `experiments/analyse_forgetting.py`
+asks the final network which class it assigns to each original digit:
 
 | task | digits | class assigned by the final net | own labels | task accuracy |
 |---|---|---|---|---|
@@ -138,28 +172,60 @@ Forgetting is far from uniform across tasks — 89.5 pp for 4v5 but only 15.9 pp
 | 2v3 | 2, 3 | 0, 0 | 0, 1 | 50.1% |
 | 6v7 | 6, 7 | 0, 1 | 0, 1 | **82.9%** |
 
-The network is not retaining a weakened version of each old task. It has collapsed onto the last task's decision rule — "does this look more like an 8 or a 9?" — and an old task scores well only when its own label assignment happens to *agree* with that rule. 6 resembles 8 and 7 resembles 9, and both agree, so 6v7 survives. 4 resembles 9 and 5 resembles 8, and both disagree, so 4v5 lands below chance: the network is confidently, systematically inverted.
+The network keeps no weakened copy of each old task. It has collapsed onto the last
+task's decision rule ("does this look more like an 8 or a 9?"), and an old task scores
+well only when its own labels happen to agree with that rule. 6 resembles 8, 7 resembles
+9, both agree, and 6v7 survives. 4 resembles 9, 5 resembles 8, both disagree, and 4v5
+lands below chance: the network inverts its answers with full confidence.
 
-So the 89.5-vs-15.9 spread is not some tasks being more robust than others. Every task was overwritten equally; the spread is coincidental label alignment with whatever was trained last. Forgetting here is total overwriting plus luck, not graded decay — which also means per-task forgetting numbers should not be read as a memory-strength ranking.
+So the 89.5-vs-15.9 spread says nothing about some tasks being tougher than others. The
+last task overwrote every one of them; the spread comes from which label assignments
+happen to line up with the final rule. Forgetting here is total overwriting plus luck.
+Read the per-task numbers as label luck, never as a memory-strength ranking.
 
 ### The task-incremental protocol: a floor effect
 
-The originally pre-registered protocol was **task-incremental**: task identity is given at test time and each task gets its own private output head, so the network only ever has to pick between the two digits of the task it is currently told it is solving. Run first, it produced a floor effect: forgetting of −0.03 pp ±0.22 (backprop) and −0.11 pp ±0.28 (CHL), with accuracy at 98.36% (backprop) and 98.31% (CHL), and joint ceilings of 98.15% and 98.10% — both close enough to zero, given the noise on 3 seeds, that the small negative numbers should be read as sampling noise, not measured backward transfer. Separate heads plus transferable stroke features mean the tasks barely interfere, so this protocol cannot separate the rules at all — both land within noise of those ceilings and of each other. It is kept because "this benchmark has no signal" is itself worth recording — see Amendment 1 in [`docs/preregistration.md`](docs/preregistration.md), which is also why the domain-incremental protocol above was added.
+The original pre-registered protocol was **task-incremental**: the test reveals which
+task an image came from, and each task gets its own private output head, so the network
+picks between two digits it already knows it should be choosing between. Run first, this
+produced a floor effect: forgetting of −0.03 pp ±0.22 (backprop) and −0.11 pp ±0.28
+(CHL), accuracy at 98.36% and 98.31%, joint ceilings at 98.15% and 98.10%. Read the small
+negative numbers as sampling noise on 3 seeds, and skip any backward-transfer story.
+Separate heads plus transferable stroke features keep the tasks from interfering, so this
+protocol cannot separate the rules at all; both land within noise of those ceilings and
+of each other. It stays in the repo because "this benchmark has no signal" is worth
+recording. See Amendment 1 in [`docs/preregistration.md`](docs/preregistration.md), which
+is also why the domain-incremental protocol above exists.
 
 ## What this is / is not
 
-- **Is:** a minimal, tested, readable implementation of one local learning rule, plus a small pre-registered replication of a specific literature claim.
-- **Is not:** a new method, a state-of-the-art (SOTA) result, or a general-purpose library. There is no claim here that biologically-motivated learning rules are better than backprop at anything.
+- **Is:** a minimal, tested, readable implementation of one local learning rule, plus a
+  small pre-registered replication of a specific literature claim.
+- **Is not:** a new method, a state-of-the-art (SOTA) result, or a general-purpose
+  library. Nothing here claims that biologically-motivated learning rules beat backprop
+  at anything.
 
 ## Scope of the claim
 
-On this architecture, on Split-MNIST, in these two settings, with an identical tuning budget, these two rules forgot this much. Nothing about depth, other datasets, class-incremental settings (a harder protocol, not run here, where the network must pick the right digit out of every digit seen so far, not just the current task's two), or language models.
+On this architecture, on Split-MNIST, in these two settings, with an identical tuning
+budget, these two rules forgot this much. Nothing about depth, other datasets,
+class-incremental settings (a harder protocol, absent here, where the network must pick
+the right digit out of every digit seen so far), or language models.
 
-### One scope change was made after the results were known
+### One scope change came after the results were known
 
-The original design compared **three** rules. Predictive coding was dropped after the numbers were in, because under the fixed-prediction assumption it computes *literally the same gradient* as backprop — verified to 2.8e-16 in float64. Its arm was a correctness check on the implementation, not an independent condition, and removing it changed no number for backprop or CHL. This is recorded as Amendment 2 in [`docs/preregistration.md`](docs/preregistration.md) rather than applied silently, and the three-rule results remain in the git history.
+The original design compared **three** rules. I dropped predictive coding after the
+numbers were in, because under the fixed-prediction assumption it computes the same
+gradient as backprop, verified to 2.8e-16 in float64. Its arm was a correctness check on
+the implementation, and removing it changed no number for backprop or CHL. Amendment 2 in
+[`docs/preregistration.md`](docs/preregistration.md) records the change, and the
+three-rule results remain in the git history.
 
-CHL's depth sensitivity is not tested in this project — no depth sweep is run here. That it degrades with depth is a premise carried over from the broader local-learning-rules literature this repo builds on, not something verified directly by this repo's own experiments. This experiment deliberately stays in the shallow regime where that literature says CHL works, which is exactly why it cannot speak to depth at all — that gap is part of the scope being disclosed, not an oversight.
+This project runs no depth sweep, so CHL's depth sensitivity goes untested here. That CHL
+degrades with depth is a premise carried over from the local-learning-rules literature,
+and the experiment stays in the shallow regime where that literature says CHL works. The
+same choice that keeps CHL working keeps this repo silent about depth. The repo
+discloses that gap instead of hiding it.
 
 ## Install & reproduce
 
@@ -172,11 +238,12 @@ uv run python experiments/analyse_forgetting.py                       # the coll
 uv run python experiments/animate_settling.py                         # regenerates the GIF above
 ```
 
-CPU only — no GPU required at any point. Tests run in about 7 seconds; the two comparison experiments take a few minutes total.
+CPU only; no GPU needed at any point. The tests run in about 7 seconds, and the two
+comparison experiments take a few minutes total.
 
 ## Use the implementation
 
-This is not a general-purpose library, but the implementation is small and importable. To
+The repo is not a general-purpose library, but the implementation is small and importable. To
 train CHL on your own data:
 
 ```python
@@ -189,19 +256,19 @@ train(net, "chl", x_train, y_train, lr=0.1, epochs=10, batch_size=64, seed=0,
 print(accuracy(net, x_test, y_test))
 ```
 
-`rule="backprop"` runs the reference rule through the identical training loop, so anything
-you measure differs only by the update rule.
+`rule="backprop"` runs the reference rule through the identical training loop, so
+anything you measure differs by the update rule alone.
 
 ## Why this exists, and what it claims
 
-Accounts of the brain stress that cortex learns **continuously and locally** from an
-ongoing stream, while language models are trained **offline and globally** by
-backpropagation and cannot absorb new examples without disturbing old weights. This
-repository turns one narrow, testable slice of that contrast into something measurable.
+Textbook accounts say cortex learns from a continuous stream through local rules, while
+engineers train language models offline with backpropagation, and a trained model cannot
+absorb new examples without disturbing old weights. This repository takes one narrow,
+testable slice of that contrast and measures it.
 
-The claim is deliberately small: a minimal, tested, PyTorch-native implementation of CHL,
-validated against its equivalence theorem, used for controlled forgetting comparisons.
-It is *not* "no CHL implementation exists" — several do, and they are credited below.
+The claim stays small: a minimal, tested, PyTorch-native implementation of CHL, validated
+against its equivalence theorem, used for controlled forgetting comparisons. Several CHL
+implementations predate this one, and the table below credits them.
 
 ## Prior work
 
@@ -210,24 +277,29 @@ It is *not* "no CHL implementation exists" — several do, and they are credited
 | [emer/leabra](https://github.com/emer/leabra) | O'Reilly's GeneRec; its symmetric-midpoint variant *is* CHL. The canonical implementation, taught for 25+ years via [compcogneuro.org](https://compcogneuro.org). | Full cognitive architecture in Go; CHL is buried inside it rather than isolated and testable. |
 | [PsyNeuLink](https://princetonuniversity.github.io/PsyNeuLink/ContrastiveHebbianMechanism.html) | Princeton's cognitive-modelling toolkit, actively maintained, ships a first-class `ContrastiveHebbianMechanism`. | Modelling framework, not a PyTorch trainer; no equivalence-to-backprop test suite. |
 | [Vivilux](https://github.com/NeuroSumbaD/Vivilux) | CHL on simulated photonic hardware. Actively maintained. | Hardware-specific. |
-| [Dual-Propagation](https://github.com/Rasmuskh/Dual-Propagation) | An accelerated CHL variant using dyadic neurons (JAX/Julia). | A faster formulation. This repo implements the original 2003 equations deliberately, because the point is to test *that* theorem — pedagogical clarity over speed. |
-| [Lillicrap et al. 2016](https://www.nature.com/articles/ncomms13276) | Feedback Alignment: random fixed feedback weights still support learning, because the forward weights align to them. | A different algorithm proving a different claim. "Still learns" is not "equals the backprop gradient", so round 1's comparison keeps the weights tied — and round 2's untied arm is this idea transplanted into a settling network. |
+| [Dual-Propagation](https://github.com/Rasmuskh/Dual-Propagation) | An accelerated CHL variant using dyadic neurons (JAX/Julia). | A faster formulation. This repo implements the original 2003 equations on purpose, because the point is to test *that* theorem: clarity over speed. |
+| [Lillicrap et al. 2016](https://www.nature.com/articles/ncomms13276) | Feedback Alignment: random fixed feedback weights still support learning, because the forward weights align to them. | A different algorithm proving a different claim. "Still learns" is not "equals the backprop gradient", so round 1's comparison keeps the weights tied; round 2's untied arm transplants this idea into a settling network. |
 
 ## Honest statement of the theorem's cost
 
-Xie & Seung's equivalence is not free. It requires **infinitesimally weak feedback** (`γ → 0`) and, as a direct consequence, **per-layer learning rates that grow exponentially with distance from the output** (the `γ^(k-L)` factor in Eq. 2.8). Both are biologically awkward and are fair criticisms of the result. They are stated here rather than buried.
+Xie & Seung's equivalence is not free. It requires **infinitesimally weak feedback**
+(`γ → 0`) and, as a direct consequence, **per-layer learning rates that grow
+exponentially with distance from the output** (the `γ^(k-L)` factor in Eq. 2.8). Both are
+biologically awkward, and both are fair criticisms of the result. This README states them
+instead of burying them.
 
-See [`docs/limits.md`](docs/limits.md) for exactly which theorem needs which limit, and why CHL's `γ` is not Equilibrium Propagation's `β`.
+See [`docs/limits.md`](docs/limits.md) for which theorem needs which limit, and why CHL's
+`γ` differs from Equilibrium Propagation's `β`.
 
 ## Layout
 
-The equivalence tests check three independent things — direction (per-layer cosine), scale
+The equivalence tests check three independent things: direction (per-layer cosine), scale
 (per-layer norm ratio against the `γ^(k-L)` factor), and the theorem's predicted `O(γ)`
-error rate — because either of the first two alone can pass on a broken implementation
-that silently drops the `γ^(k-L)` term (see [`docs/limits.md`](docs/limits.md)).
+error rate. Either of the first two alone can pass on a broken implementation that
+silently drops the `γ^(k-L)` term (see [`docs/limits.md`](docs/limits.md)).
 
 ```
-docs/limits.md               which theorem needs which limit — and the measured scope limit
+docs/limits.md               which theorem needs which limit, and the measured scope limit
 docs/preregistration.md      the frozen design, with its two amendments
 docs/exploratory-gamma.md    the γ sweep
 docs/exploratory-untied.md   the untied-feedback follow-up
