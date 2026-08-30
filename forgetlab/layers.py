@@ -138,6 +138,17 @@ class LayeredNet(nn.Module):
         Dropping it is the single most likely silent bug in this project — the code still
         runs, and deep layers are simply updated exponentially too weakly.
         """
+        if not self.tied:
+            # The factor above compensates an attenuation specific to the *transposed*
+            # feedback path (Eq. 3.3 is derived from W^T).  With untied random feedback
+            # that derivation does not apply, and inheriting the factor anyway amplifies
+            # a nearly-orthogonal update ~1/gamma-fold per layer -- measured, the weights
+            # diverge to NaN (experiments/untied_prototype_checks.py).  The untied rule is
+            # therefore *defined* without per-layer rescaling, matching the convention of
+            # random-feedback learning (Lillicrap et al. 2016, "Random synaptic feedback
+            # weights support error backpropagation for deep learning", Nat Commun
+            # 7:13276), which has no such factor because it has nothing to compensate.
+            return 1.0
         return self.gamma ** (k - self.L)
 
     # ------------------------------------------------------------- forward pass

@@ -76,8 +76,11 @@ def check_1_equivalence_is_broken() -> None:
             upd, _ = chl_updates(net, x0, y, **SETTLE)
             cos = per_layer_cosine(upd, ref)
             print(f"   {'tied' if tied else 'UNTIED':>8} {g:>6} | {cos[0]:>14.5f} {cos[1]:>14.5f}")
-    print("\n   The output layer is unaffected by construction: it is clamped straight to")
-    print("   the target, so no top-down path is involved in its update.")
+    print("\n   The output layer is clamped straight to the target, so no feedback enters")
+    print("   its own state -- but its update still contains the settled *presynaptic*")
+    print("   activity, which the feedback path shapes.  On this shallow architecture that")
+    print("   indirect effect is negligible (cosine ~0.999); on deeper nets it is not")
+    print("   (see tests/test_untied_feedback.py).")
 
 
 def check_2_settling_still_converges() -> None:
@@ -102,7 +105,12 @@ def check_2_settling_still_converges() -> None:
 def _train_once(tied: bool, lr_scale_mode: str) -> tuple[float, float]:
     net = LayeredNet([784, 128, 10], gamma=0.1, tied=tied, seed=1)
     w0 = net.W[0].detach().clone()
-    if lr_scale_mode == "off":
+    # NOTE: since the lr_scale change in layers.py, an untied net returns scale 1.0 by
+    # *definition*.  "on" therefore has to force the tied-style factor back, to reproduce
+    # the divergence that motivated that definition.
+    if lr_scale_mode == "on":
+        net.lr_scale = lambda k, g=net.gamma, L=net.L: g ** (k - L)
+    elif lr_scale_mode == "off":
         net.lr_scale = lambda k: 1.0
     elif lr_scale_mode == "freeze_hidden":
         net.lr_scale = lambda k, L=net.L: 0.0 if k < L else 1.0
@@ -118,9 +126,9 @@ def checks_3_and_4_learning() -> None:
     torch.set_default_dtype(torch.float32)
 
     rows = [
-        ("tied, gamma^(k-L) on", True, "on"),
-        ("UNTIED, gamma^(k-L) on", False, "on"),
-        ("UNTIED, gamma^(k-L) off", False, "off"),
+        ("tied, gamma^(k-L) on", True, "default"),
+        ("UNTIED, gamma^(k-L) FORCED on", False, "on"),
+        ("UNTIED (factor off, the rule)", False, "default"),
         ("UNTIED, hidden layer FROZEN", False, "freeze_hidden"),
     ]
     print(f"   {'':>30} | {'accuracy':>9} | {'hidden layer moved':>19}")
