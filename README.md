@@ -9,9 +9,12 @@ available at its own two ends (a **local** rule), while backpropagation routes a
 signal backward through the whole network. That argument circulates in textbooks and blog
 posts without a measurement attached. This repository attaches one.
 
-The pre-registered comparison answered **no**: the local rule forgot as much as backprop.
-Round 2 weakened that answer. The local rule in round 1 turned out to be a near-copy of
-backprop, and a version with the copying removed forgot less.
+The pre-registered comparison found no difference: on this one benchmark, with this one
+rule, the local rule forgot as much as backprop. Round 2 showed why even that says little
+about locality. The round 1 rule turned out to be a near-copy of backprop, and a version
+with the copying removed forgot less, on 3 seeds, with a confound still standing. Nothing
+here settles the question in the title; the repo measures what it can and labels the
+rest.
 
 ## The whole study, in one picture
 
@@ -75,7 +78,7 @@ an image came from. Identical tuning budget, 3 seeds:
 
 ![forgetting curves](results/forgetting_curves_domain.png)
 
-**The local rule forgets as much as backpropagation.** The benchmark offers 51 percentage
+**On this benchmark, the local rule forgets as much as backpropagation.** The benchmark offers 51 percentage
 points of forgetting to separate the two rules. They land 0.24 pp apart, with seed-to-seed
 standard deviations of 0.67 pp and 0.75 pp. The gap sits inside the noise.
 
