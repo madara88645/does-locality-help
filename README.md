@@ -158,6 +158,13 @@ untied arm, so trunk movement fails to explain the gap between those two. Three 
 settle none of this. The honest label is a hypothesis that has earned its own
 pre-registered test, not a finding.
 
+A rule that far from the gradient still learns, and the reason is measured rather than
+assumed: over training the forward weights rotate toward the fixed random feedback, and
+the update the rule delivers climbs from 0 to about 0.5 cosine against the true gradient
+while accuracy climbs from chance to 83.8%. The alignment stays partial, roughly 60° off
+the gradient at the end, which is the weaker condition descent actually needs
+([`docs/exploratory-untied.md`](docs/exploratory-untied.md)).
+
 What round 2 does establish: change the rule into something measurably different from
 backprop and the forgetting numbers move. Round 1's null described how close the two
 rules were to each other. It never reached the question of locality.

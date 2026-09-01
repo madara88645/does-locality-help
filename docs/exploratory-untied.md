@@ -130,6 +130,44 @@ comparison shows. Two observations survive it, cautiously:
 **Trap 3 — as expected.** Seed spreads grew (±1.17 vs ±0.75), and everything above rests
 on 3 seeds.
 
+## Measured: the alignment this write-up had been asserting
+
+The reason given above for why a nearly-orthogonal update still trains a network — the
+forward weights rotate toward the fixed random feedback — was carried over from the
+feedback-alignment literature and never checked here. It is now measured
+(`experiments/untied_alignment_over_training.py`), on single-task MNIST, `784 → 128 → 10`,
+8 epochs:
+
+| epoch | cos(W, B) | cos(delivered update, true gradient) | test accuracy |
+|---|---|---|---|
+| 0 | −0.024 | −0.057 | 9.30% |
+| 1 | 0.150 | 0.180 | 72.25% |
+| 2 | 0.256 | 0.271 | 77.90% |
+| 4 | 0.373 | 0.376 | 81.30% |
+| 6 | 0.447 | 0.447 | 82.40% |
+| 8 | 0.500 | 0.501 | 83.80% |
+
+**The alignment is real, and it is what makes learning possible.** Both angles start at
+zero, since `B` is drawn independently of `W`, and climb monotonically together.
+
+Two details worth stating precisely:
+
+- **The two columns coincide.** From epoch 4 they agree to three decimals. That is
+  mechanistically expected rather than surprising: the untied update differs from the tied
+  (≈ backprop) update only by `B` standing where `Wᵀ` would, so how well the delivered
+  update tracks the gradient is governed by how close `B` and `W` have become. It does
+  mean the cheap measurement (cosine of two matrices) is a faithful proxy for the
+  expensive one (cosine of two updates).
+- **Alignment stays partial.** At epoch 8 the delivered update still sits about 60° off
+  the true gradient, and is still rising. The network is not recovering backprop; it is
+  descending on a signal that merely has positive overlap with the gradient, which is the
+  weaker condition feedback alignment actually requires.
+
+This does not change the naming decision recorded above. The *construction* here is still
+not feedback alignment, which modifies backprop's backward pass rather than a settling
+network's dynamics. What the measurement establishes is that the same *mechanism* operates
+inside a different construction.
+
 ## Honest reading
 
 A local rule that measurably computes something other than the backprop gradient
