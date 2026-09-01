@@ -35,7 +35,7 @@ flowchart TD
         F --> G["forgets less: 45.2 pp,<br/>per-task learning intact (98.45% vs tied's 98.63%)"]
     end
     G --> H["caveat: it also moves the shared<br/>weights 3 to 4 times less"]
-    H --> V["verdict: a hypothesis that has earned its own<br/>pre-registered test, not yet a finding"]
+    H --> V["that test has now run: plasticity explains 59%,<br/>a 2.3 pp residual survives, on 5 seeds"]
 ```
 
 *(CHL = Contrastive Hebbian Learning, the local rule under test; γ = feedback strength;
@@ -129,9 +129,9 @@ backpropagation would compute for the same network (`tests/`,
 
 ## Round 2: exploratory follow-ups
 
-Two exploratory studies followed the frozen result. Each design and hypothesis went into
-a commit before its runs. Neither carries confirmatory weight. Both say more than round 1
-did.
+Three exploratory studies followed the frozen result. Each design and hypothesis went into
+a commit before its runs. None carries confirmatory weight. Together they say more than
+round 1 did.
 
 **Step one, the [γ sweep](docs/exploratory-gamma.md).** I varied the feedback strength
 across a 50-fold range. Forgetting moved less than the random choice of initial weights
@@ -149,14 +149,20 @@ aligned either way. On 3 seeds, the untied rule forgot **45.2 pp against backpro
 accuracy), and finished the sequence with the highest final accuracy of
 any arm.
 
-Two caveats cap that number, from opposite directions. The untied rule also moves the trunk, the shared
-784→256 hidden weights, three to four times less over the sequence, and a trunk that
-moves less interferes less for reasons that have nothing to do with credit assignment. On
-the other side sits the control arm: tied weights, same missing rescaling factor. It
-moves the trunk about as little (2.9% against 2.4%) yet forgets 3.3 pp more than the
-untied arm, so trunk movement fails to explain the gap between those two. Three seeds
-settle none of this. The honest label is a hypothesis that has earned its own
-pre-registered test, not a finding.
+That number needed a caveat, and the caveat has since been tested. The untied rule also
+moves the trunk, the shared 784→256 hidden weights, three to four times less over the
+sequence, and a trunk that moves less interferes less for reasons having nothing to do with
+credit assignment. **Step three, [the plasticity curve](docs/exploratory-plasticity.md),**
+throttled the ordinary tied rule through seven settings to trace forgetting against trunk
+movement, then placed the untied arm on that curve, at 5 seeds.
+
+The curve turned out flat over most of its range: cutting trunk movement from 9.9% to 5.3%
+changes forgetting not at all, and the dependence appears only below about 5%. The untied
+arm lands 2.34 pp below the curve at its own trunk movement, so plasticity accounts for 59%
+of its advantage and a residual survives matching. That residual is roughly two seed
+standard deviations, though, and a tied rule throttled far enough reaches 43.93 pp
+forgetting at 62.8% accuracy, beating untied on both with no untying at all. Turning
+plasticity down buys the same thing more simply.
 
 A rule that far from the gradient still learns, and the reason is measured rather than
 assumed: over training the forward weights rotate toward the fixed random feedback, and
@@ -311,8 +317,9 @@ silently drops the `γ^(k-L)` term (see [`docs/limits.md`](docs/limits.md)).
 ```
 docs/limits.md               which theorem needs which limit, and the measured scope limit
 docs/preregistration.md      the frozen design, with its two amendments
-docs/exploratory-gamma.md    the γ sweep
-docs/exploratory-untied.md   the untied-feedback follow-up
+docs/exploratory-gamma.md      the γ sweep
+docs/exploratory-untied.md     the untied-feedback follow-up
+docs/exploratory-plasticity.md is the untied result just lower plasticity?
 forgetlab/layers.py          the settling network (tied or untied feedback)
 forgetlab/rules/             backprop (reference), CHL
 forgetlab/metrics.py         ACC, forgetting, per-layer gradient alignment
