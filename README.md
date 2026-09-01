@@ -12,9 +12,10 @@ posts without a measurement attached. This repository attaches one.
 The pre-registered comparison found no difference: on this one benchmark, with this one
 rule, the local rule forgot as much as backprop. Round 2 showed why even that says little
 about locality. The round 1 rule turned out to be a near-copy of backprop, and a version
-with the copying removed forgot less, on 3 seeds, with a confound still standing. Nothing
-here settles the question in the title; the repo measures what it can and labels the
-rest.
+with the copying removed forgot less. A third study then tested whether that gap was
+really about the rule: most of it is explained by the version simply moving its weights
+less, and throttling the ordinary rule the same way matches it. Nothing here settles the
+question in the title; the repo measures what it can and labels the rest.
 
 ## The whole study, in one picture
 
@@ -35,7 +36,7 @@ flowchart TD
         F --> G["forgets less: 45.2 pp,<br/>per-task learning intact (98.45% vs tied's 98.63%)"]
     end
     G --> H["caveat: it also moves the shared<br/>weights 3 to 4 times less"]
-    H --> V["that test has now run: plasticity explains 59%,<br/>a 2.3 pp residual survives, on 5 seeds"]
+    H --> V["that test has now run: plasticity explains 59%<br/>and a throttled ordinary rule matches the rest"]
 ```
 
 *(CHL = Contrastive Hebbian Learning, the local rule under test; γ = feedback strength;
@@ -149,7 +150,8 @@ aligned either way. On 3 seeds, the untied rule forgot **45.2 pp against backpro
 accuracy), and finished the sequence with the highest final accuracy of
 any arm.
 
-That number needed a caveat, and the caveat has since been tested. The untied rule also
+That number needed a caveat, and the caveat has since been tested — at 5 seeds, which re-measured
+both arms and shifted them slightly (the standard rule to 50.47 pp, untied to 44.77 pp). The untied rule also
 moves the trunk, the shared 784→256 hidden weights, three to four times less over the
 sequence, and a trunk that moves less interferes less for reasons having nothing to do with
 credit assignment. **Step three, [the plasticity curve](docs/exploratory-plasticity.md),**
@@ -315,16 +317,16 @@ error rate. Either of the first two alone can pass on a broken implementation th
 silently drops the `γ^(k-L)` term (see [`docs/limits.md`](docs/limits.md)).
 
 ```
-docs/limits.md               which theorem needs which limit, and the measured scope limit
-docs/preregistration.md      the frozen design, with its two amendments
+docs/limits.md                 which theorem needs which limit, and the measured scope limit
+docs/preregistration.md        the frozen design, with its two amendments
 docs/exploratory-gamma.md      the γ sweep
 docs/exploratory-untied.md     the untied-feedback follow-up
 docs/exploratory-plasticity.md is the untied result just lower plasticity?
-forgetlab/layers.py          the settling network (tied or untied feedback)
-forgetlab/rules/             backprop (reference), CHL
-forgetlab/metrics.py         ACC, forgetting, per-layer gradient alignment
-experiments/                 comparison driver, guard scripts, the settling-GIF generator
-tests/                       equivalence anchors, untied anchors, sanity checks
+forgetlab/layers.py            the settling network (tied or untied feedback)
+forgetlab/rules/               backprop (reference), CHL
+forgetlab/metrics.py           ACC, forgetting, per-layer gradient alignment
+experiments/                   comparison driver, guard scripts, the settling-GIF generator
+tests/                         equivalence anchors, untied anchors, sanity checks
 ```
 
 ## License

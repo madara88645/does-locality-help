@@ -152,7 +152,9 @@ zero, since `B` is drawn independently of `W`, and climb monotonically together.
 
 Two details worth stating precisely:
 
-- **The two columns coincide.** From epoch 4 they agree to three decimals. That is
+- **The two columns track each other.** They start 0.033 apart and close to within
+  0.003 by epoch 4, at their closest (0.0006) at epoch 6, and are still within 0.002 at
+  epoch 8 — near-indistinguishable curves rather than an exact identity. That is
   mechanistically expected rather than surprising: the untied update differs from the tied
   (≈ backprop) update only by `B` standing where `Wᵀ` would, so how well the delivered
   update tracks the gradient is governed by how close `B` and `W` have become. It does
