@@ -59,3 +59,77 @@ lower than a backprop-like rule matched to the same trunk movement.
 **Could not:** that plasticity and credit assignment have been fully separated (trap 2),
 anything outside this range of `s`, or confirmatory weight — this analysis was chosen
 after the untied result was known.
+
+---
+
+# Result
+
+5 seeds, domain-incremental Split-MNIST, everything else frozen.
+
+| arm | trunk moved | forgetting | ACC | attainment |
+|---|---|---|---|---|
+| tied, s = 1.0 *(the standard rule)* | 9.89% | 50.47 ±0.76 | 57.88% | 98.63% |
+| tied, s = 0.6 | 7.11% | 50.71 ±0.73 | 57.69% | 98.67% |
+| tied, s = 0.35 | 5.30% | 50.60 ±0.74 | 57.80% | 98.69% |
+| tied, s = 0.2 | 4.04% | 49.83 ±0.70 | 58.40% | 98.67% |
+| tied, s = 0.1 *(= flat-scale control)* | 2.88% | 48.36 ±0.86 | 59.53% | 98.62% |
+| **UNTIED** | **2.28%** | **44.77 ±1.04** | **62.16%** | **98.47%** |
+| tied, s = 0.05 | 1.96% | 46.44 ±1.16 | 61.00% | 98.57% |
+| tied, s = 0.02 | 1.05% | 43.93 ±1.32 | 62.82% | 98.43% |
+
+Rows are ordered by trunk movement, so the untied arm sits where it belongs on the curve.
+`s = 0.05` and `s = 0.02` were added after the first pass, because the untied arm moved
+less than the original lowest point and the comparison would otherwise have had to
+extrapolate. They bracket it.
+
+**Trap 1 cleared.** Attainment stays in 98.43–98.69% across every arm. No throttle setting
+stopped the network fitting its tasks, so nothing on this curve is low-forgetting for the
+trivial reason.
+
+## Reading the curve
+
+**The curve is not a line.** From 9.89% down to 5.30% trunk movement — a 1.9× reduction —
+forgetting does not move at all (50.47, 50.71, 50.60). Only below roughly 5% does it start
+to fall, and then it falls steeply. So "moving the shared weights less causes less
+forgetting" is false over most of the range and true only at low plasticity. That was not
+obvious before measuring, and it is the reason a single matched control could not have
+settled this.
+
+**The untied arm sits below the curve.** Interpolating between its two bracketing points
+(1.96% → 46.44 and 2.88% → 48.36) puts the curve at **47.11** at the untied arm's own
+2.28% trunk movement. It measured 44.77, i.e. **2.34 pp lower than its plasticity
+predicts**.
+
+Splitting the original gap against the standard rule:
+
+```
+tied, s = 1.0                     50.47
+curve at untied's trunk movement  47.11     <- 3.36 pp explained by plasticity  (59%)
+UNTIED, measured                  44.77     <- 2.34 pp left over               (41%)
+```
+
+**The pre-registered prediction held.** It said the untied arm would land slightly below
+the curve with most of the gap explained by plasticity: 59% explained, 2.34 pp residual.
+
+## The deflating part, stated plainly
+
+A tied rule throttled far enough reaches the untied arm's numbers without any untying at
+all. At `s = 0.02` it forgets 43.93 pp (below untied's 44.77) at 62.82% ACC (above untied's
+62.16%). Whatever the untied rule buys, **turning plasticity down buys the same thing and
+more.** The untied rule is not a floor, and it is not the only route to this behaviour.
+
+So the honest summary is narrower than the untied write-up's original framing: most of the
+untied arm's advantage is plasticity, a small residual survives matching, and a simpler
+intervention on the ordinary rule reaches the same place.
+
+## What this does and does not settle
+
+**Settles:** a single plasticity-matched control was not enough, and the curve shows why —
+the relationship is flat over most of its range. Plasticity accounts for the majority of
+the untied effect. The remaining 2.34 pp is about two seed standard deviations on 5 seeds:
+suggestive, not established.
+
+**Does not settle:** trap 2 stands. Trunk movement is a direction-blind proxy, so matching
+on it does not fully match "how much the rule disturbs what earlier tasks needed". A rule
+could move the same distance in a less destructive direction, and this experiment cannot
+see that. Testing it needs a measure of *where* the trunk moved, not just how far.
