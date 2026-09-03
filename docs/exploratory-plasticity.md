@@ -222,3 +222,62 @@ Trap 2 from the original design still constrains the reading: trunk movement is 
 direction-blind proxy, so "matched on plasticity" means matched on distance, and a
 mechanism operating in some other property of the movement would be invisible to this
 comparison. That is now the most likely place for the answer to be hiding.
+
+---
+
+# Chasing the residual: five hypotheses, one partial answer
+
+The 2.38 pp residual is real and survives 15 seeds. Five attempts to explain it, in order:
+
+| # | hypothesis | script | outcome |
+|---|---|---|---|
+| 1 | untied moves in a less harmful direction | `damage_direction.py` | **failed** — prediction came out inverted |
+| 2 | the damage is in the head, not the trunk | `where_is_the_damage.py` | **located it** — the head causes ~86% of all forgetting, but the rules differ only in the trunk |
+| 3 | successive tasks push the trunk into conflict | `trunk_interference.py` | **failed** — both rules alike, untied marginally worse |
+| 4 | untied's tasks reuse one trunk direction | `trunk_subspace.py` | **held, but explains the wrong thing** |
+| 5 | is it the fixedness of B, or its randomness? | `feedback_fixed_vs_random.py` | **randomness** |
+
+## What hypothesis 4 actually explains
+
+Feedback into the hidden layer is `(output state) @ (feedback matrix)`, and the output is
+two units wide, so that contribution occupies a subspace of dimension at most 2. Untied's
+`B` never updates, so the subspace is frozen for the whole run; tied's `W_1` trains, so
+its subspace rotates and each task reaches new ground. Measured: the untied arm's five
+per-task trunk changes share a leading direction at 0.995, about 6° apart, against the
+tied arm's 0.887, about 27° apart.
+
+That is real and structural. It is also, as hypothesis 5 shows, an explanation of the
+plasticity drop rather than of the residual.
+
+## Hypothesis 5: the separation
+
+Untying does two things at once — the feedback matrix becomes fixed, *and* becomes
+unrelated to the forward path. A third rule separates them: freeze a copy of `W_1` taken
+at initialisation. Fixed, but not independent.
+
+| arm | forgetting | trunk moved | shared direction | curve says | residual |
+|---|---|---|---|---|---|
+| tied | 50.89 pp | 9.90% | 0.8874 | — | — |
+| frozen-copy | 46.32 pp | 1.95% | 0.9949 | 46.73 pp | **0.41 pp** |
+| untied | 45.00 pp | 2.24% | 0.9950 | 47.37 pp | **2.37 pp** |
+
+15 seeds; attainment 98.50–98.56% throughout.
+
+**Freezing the feedback does not produce the residual.** The frozen-copy arm forgets
+4.6 pp less than tied and lands on the plasticity curve — 0.41 pp off, down from 0.97 pp
+at 5 seeds. Its whole advantage is that it moves the trunk less, which the curve already
+counts.
+
+**And the shared direction cannot be the mechanism.** Both frozen arms sit at 0.995,
+indistinguishable, yet only the untied one has a residual. Sharing a direction explains
+why the trunk moves less; it does not explain what is left after that is subtracted.
+
+## Where this leaves it
+
+The residual requires the feedback matrix to be **unrelated to the forward path**, not
+merely fixed. Freezing is not enough; the independence is doing the work.
+
+That is narrower than where this started, and it is still not a mechanism. Five
+hypotheses have been spent, four of them recorded as failures. The honest position is
+unchanged from before: a real effect, now with a sharper description of what it depends
+on, and no account of why.
