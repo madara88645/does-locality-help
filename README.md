@@ -161,10 +161,11 @@ movement, then placed the untied arm on that curve, at 5 seeds.
 The curve turned out flat over most of its range: cutting trunk movement from 9.9% to 5.3%
 changes forgetting not at all, and the dependence appears only below about 5%. The untied
 arm lands 2.34 pp below the curve at its own trunk movement, so plasticity accounts for 59%
-of its advantage and a residual survives matching. That residual is roughly two seed
-standard deviations, though, and a tied rule throttled far enough reaches 43.93 pp
-forgetting at 62.8% accuracy, beating untied on both with no untying at all. Turning
-plasticity down buys the same thing more simply.
+of its advantage and a residual survives matching. That residual held when the seed count
+was tripled — 2.38 pp at 15 seeds against 2.34 pp at 5 — so it is a real effect, and three
+attempts to find its mechanism have all failed. A tied rule throttled far enough still
+reaches 43.93 pp forgetting at 62.8% accuracy, beating untied on both with no untying at
+all, so turning plasticity down remains the simpler route to the same place.
 
 A rule that far from the gradient still learns, and the reason is measured rather than
 assumed: over training the forward weights rotate toward the fixed random feedback, and

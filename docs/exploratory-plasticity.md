@@ -126,8 +126,9 @@ intervention on the ordinary rule reaches the same place.
 
 **Settles:** a single plasticity-matched control was not enough, and the curve shows why —
 the relationship is flat over most of its range. Plasticity accounts for the majority of
-the untied effect. The remaining 2.34 pp is about two seed standard deviations on 5 seeds:
-suggestive, not established.
+the untied effect. The remaining 2.34 pp was two seed standard deviations on 5 seeds, and
+was called suggestive rather than established. It has since been re-measured at 15 seeds
+and did not move (2.38 pp), so it is real — see the section below.
 
 **Does not settle:** trap 2 stands. Trunk movement is a direction-blind proxy, so matching
 on it does not fully match "how much the rule disturbs what earlier tasks needed". A rule
@@ -174,3 +175,50 @@ because it failed to learn.
 This locates the effect without finishing the explanation. The curve above already showed
 that most of the trunk difference is distance travelled. What distance does not cover is
 still open.
+
+---
+
+# The residual is real: 15 seeds
+
+Three attempts to find a mechanism behind the 2.34 pp residual failed in a row:
+
+- `experiments/damage_direction.py` — whether the untied rule moves in a less harmful
+  direction. Its prediction came out **inverted**, so the measurement was invalid.
+- `experiments/where_is_the_damage.py` — the head/trunk split. This one **worked**, and
+  located the difference in the trunk rather than the shared head, but locating is not
+  explaining.
+- `experiments/trunk_interference.py` — whether successive tasks push the trunk in
+  colliding directions. Both rules came out the same, the untied one marginally worse.
+
+At that point the simplest remaining hypothesis was that there was no effect to explain,
+and the residual was sampling noise on 5 seeds. That is testable: noise shrinks with more
+seeds. It was tested (`experiments/residual_more_seeds.py`).
+
+| arm | trunk moved | forgetting | seeds |
+|---|---|---|---|
+| **UNTIED** | 2.24% | **45.00 ±0.82** | 15 |
+| tied, s = 0.05 | 1.93% | 46.69 ±0.87 | 15 |
+| tied, s = 0.1 | 2.84% | 48.68 ±0.65 | 15 |
+
+Interpolating between the two tied points, which bracket the untied arm's trunk movement:
+
+```
+curve at 2.24%    47.38
+untied measured   45.00
+residual          +2.38 pp     (2.34 pp at 5 seeds)
+```
+
+**The residual did not shrink.** Tripling the seeds moved it by 0.04 pp while the
+per-seed spread stayed near 0.8, so the mean now carries roughly 0.21 pp of standard
+error against a 2.38 pp gap. The noise hypothesis is refuted.
+
+So the position is: **a real effect with an unknown mechanism.** The untied rule forgets
+about 2.4 pp less than a backprop-like rule matched to the same trunk movement, that
+difference lives in the trunk rather than the shared head, and neither the direction it
+moves nor how its tasks' movements interact accounts for it. Three plausible explanations
+have been eliminated, which narrows the search without ending it.
+
+Trap 2 from the original design still constrains the reading: trunk movement is a
+direction-blind proxy, so "matched on plasticity" means matched on distance, and a
+mechanism operating in some other property of the movement would be invisible to this
+comparison. That is now the most likely place for the answer to be hiding.
