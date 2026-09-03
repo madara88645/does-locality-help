@@ -133,3 +133,44 @@ suggestive, not established.
 on it does not fully match "how much the rule disturbs what earlier tasks needed". A rule
 could move the same distance in a less destructive direction, and this experiment cannot
 see that. Testing it needs a measure of *where* the trunk moved, not just how far.
+
+---
+
+# Follow-up: where the damage happens
+
+Trap 2 above said trunk movement is blind to direction. The first attempt to measure
+direction failed outright (`experiments/damage_direction.py`): the untied arm moves in a
+far less harmful direction by that metric and then loses *more* on task 1, so the
+prediction was inverted rather than weak. One of its two candidate explanations was that
+the measurement looked at the trunk while the protocol collides every task in one shared
+two-unit output head.
+
+That is now separated (`experiments/where_is_the_damage.py`). After task 1, the remaining
+tasks are trained either normally or with the trunk frozen so only the head can change:
+
+| arm | trunk | forgetting | attainment |
+|---|---|---|---|
+| tied | learns normally | 50.35 pp | 98.63% |
+| tied | **frozen after task 1** | 43.48 pp | 98.21% |
+| untied | learns normally | 45.21 pp | 98.45% |
+| untied | **frozen after task 1** | 44.01 pp | 98.29% |
+
+**The shared head accounts for most of the forgetting, and both rules pay it equally.**
+With the trunk frozen outright, 43.5 pp still goes. That is roughly 86% of the total, and
+neither rule can avoid it: five tasks writing to two output units overwrite each other
+regardless of how credit was assigned.
+
+**The rules differ in the damage their trunk updates add on top.** Tied adds 6.87 pp,
+untied adds 1.20 pp. The 5.67 pp difference is the size of the 5.14 pp gap between the
+arms. The untied arm's advantage is therefore located: it is in what the rule does to the
+trunk, not the head, and the untied arm already sits close to the floor where the trunk
+does no damage at all.
+
+Two checks. Freezing is the limit of throttling and the two agree across separate runs:
+frozen tied gives 43.48 pp here, the most throttled point above (`s = 0.02`) gives
+43.93 pp. And attainment stays 98.21–98.63% throughout, so nothing here is low-forgetting
+because it failed to learn.
+
+This locates the effect without finishing the explanation. The curve above already showed
+that most of the trunk difference is distance travelled. What distance does not cover is
+still open.
