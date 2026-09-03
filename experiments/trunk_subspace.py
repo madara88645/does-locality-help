@@ -29,6 +29,32 @@ Measured per rule:
                   Near 1 means every task pushed the same way; near 0 means each found
                   its own.
 
+RESULT (3 seeds), and the prediction holds:
+
+    rule     stable rank   shared direction
+    tied            1.15             0.8890
+    UNTIED          1.04             0.9951
+
+Both changes are close to rank one, which the two-unit output bottleneck already implies.
+The separation is in the second column. The untied arm's five tasks push the trunk along
+almost exactly the same direction -- 0.995, about 6 degrees apart -- while the tied arm's
+tasks land some 27 degrees apart and each take partly their own ground.
+
+That is what the fixed feedback matrix predicts. B never moves, so the subspace the
+top-down signal can occupy never moves either, and every task is forced through it. W_1
+trains, so the tied arm's subspace rotates and each task reaches somewhere the previous
+ones did not.
+
+The mechanism this suggests for the residual: damage depends on how many DISTINCT trunk
+directions get disturbed, not only on how far the trunk travels. Untied disturbs roughly
+one direction across the whole sequence; tied disturbs several partly-different ones, and
+each of those is fresh damage to what earlier tasks had settled on.
+
+This is the first of four hypotheses to survive contact with a measurement. It remains a
+correlation: the causal question is whether fixing the subspace is what does the work, or
+whether the randomness of B matters too, which experiments/feedback_fixed_vs_random.py
+separates.
+
 Run with::
 
     uv run python experiments/trunk_subspace.py
