@@ -66,3 +66,55 @@ clean, honest close — "we checked whether it generalises and it did not" is a 
 ending than leaving the question unasked.
 
 Either way this is the last planned experiment.
+
+---
+
+# Result
+
+5 seeds. Chance is 10%, not 50%.
+
+| arm | forgetting | final accuracy | attainment | trunk moved |
+|---|---|---|---|---|
+| backprop | 98.74 ±0.15 | 19.34% | 98.74% | 11.28% |
+| tied CHL | 98.66 ±0.28 | 19.33% | 98.66% | 10.80% |
+| tied CHL, throttled 0.05 | 98.65 ±0.04 | 19.30% | 98.65% | 1.59% |
+| untied CHL | 98.52 ±0.08 | 19.27% | 98.53% | 2.98% |
+
+**Trap 1 fired, in its harshest form.** Every arm learns every task — attainment is 98.5%
+or better throughout — and then forgets essentially all of it. Forgetting is ~98.7 pp out
+of a possible ~98.7. Final accuracy sits at 19.3%, which is what a network collapsed
+entirely onto the last task scores when averaged over five tasks: near-perfect on 8v9,
+near-zero on the rest.
+
+So this is a **ceiling effect**, and it is the exact mirror of the floor effect that forced
+Amendment 1. Task-incremental left nothing to forget; class-incremental leaves nothing to
+retain. Neither has room to separate learning rules. The four arms span 0.22 pp against a
+possible ~99, which is saturation, not similarity.
+
+## What this settles
+
+**The prediction was 40% that the effect survives. It did not — but not because it was
+refuted.** The test saturated before it could measure anything, so the honest verdict is
+that this protocol cannot answer the question at this scale, not that the answer is no.
+
+What that leaves is a sharp constraint on the finding:
+
+> The untied rule's advantage exists in domain-incremental Split-MNIST, which is the only
+> one of the three standard protocols with measurement room at this architecture and
+> budget. The two neighbouring settings saturate in opposite directions.
+
+An effect that can only be seen through one window is not thereby false. It is, however,
+unresolvable from inside this project: relieving the ceiling would need more data, more
+capacity and a retuned budget, which breaks the frozen identical-tuning-budget discipline
+that makes the original comparison trustworthy. That is a different experiment, and a
+bigger one.
+
+## Why this closes the project
+
+The question this repository set out to ask has been answered as far as this setup can
+answer it, and the answer is documented along with the reasons it cannot go further. Three
+protocols, two of them saturated; one real effect confined to the third; five hypotheses
+for its mechanism, four eliminated and the fifth explaining the wrong quantity.
+
+Leaving it here with that stated is a better ending than either pretending the finding
+generalises or quietly not checking.
