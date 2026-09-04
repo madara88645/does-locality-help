@@ -17,6 +17,9 @@ really about the rule: most of it is explained by the version simply moving its 
 less, and throttling the ordinary rule the same way matches it. Nothing here settles the
 question in the title; the repo measures what it can and labels the rest.
 
+**This project is finished.** What it found, what it failed to explain, and why it could not
+go further are all in the write-up below.
+
 ## The whole study, in one picture
 
 ```mermaid
@@ -36,7 +39,7 @@ flowchart TD
         F --> G["forgets less: 45.2 pp,<br/>per-task learning intact (98.45% vs tied's 98.63%)"]
     end
     G --> H["caveat: it also moves the shared<br/>weights 3 to 4 times less"]
-    H --> V["that test has now run: plasticity explains 59%<br/>and a throttled ordinary rule matches the rest"]
+    H --> V["tested: plasticity explains 59%, a throttled ordinary<br/>rule matches the rest, and the leftover is visible<br/>in only one of the three standard protocols"]
 ```
 
 *(CHL = Contrastive Hebbian Learning, the local rule under test; γ = feedback strength;
@@ -150,7 +153,7 @@ aligned either way. On 3 seeds, the untied rule forgot **45.2 pp against backpro
 accuracy), and finished the sequence with the highest final accuracy of
 any arm.
 
-That number needed a caveat, and the caveat has since been tested — at 5 seeds, which re-measured
+That number needed a caveat, and the caveat has since been tested, at 5 seeds, which re-measured
 both arms and shifted them slightly (the standard rule to 50.47 pp, untied to 44.77 pp). The untied rule also
 moves the trunk, the shared 784→256 hidden weights, three to four times less over the
 sequence, and a trunk that moves less interferes less for reasons having nothing to do with
@@ -162,7 +165,7 @@ The curve turned out flat over most of its range: cutting trunk movement from 9.
 changes forgetting not at all, and the dependence appears only below about 5%. The untied
 arm lands 2.34 pp below the curve at its own trunk movement, so plasticity accounts for 59%
 of its advantage and a residual survives matching. That residual held when the seed count
-was tripled — 2.38 pp at 15 seeds against 2.34 pp at 5 — so it is a real effect, and three
+was tripled: 2.38 pp at 15 seeds against 2.34 pp at 5. It is a real effect, and three
 attempts to find its mechanism have all failed. A tied rule throttled far enough still
 reaches 43.93 pp forgetting at 62.8% accuracy, beating untied on both with no untying at
 all, so turning plasticity down remains the simpler route to the same place.
@@ -178,6 +181,43 @@ What round 2 does establish: change the rule into something measurably different
 backprop and the forgetting numbers move. Round 1's null described how close the two
 rules were to each other. It never reached the question of locality.
 
+## Round 3, and where this stopped
+
+Two questions remained: what mechanism produces the leftover 2.4 pp, and whether the
+effect exists outside this one setup. Both were pursued, and the second is what ended the
+project.
+
+**The mechanism resisted five attempts**, four of them recorded as failures in
+[`docs/exploratory-plasticity.md`](docs/exploratory-plasticity.md). One located the effect.
+Freezing the shared trunk after the first task still leaves 43.5 pp of forgetting, so
+the two-unit output head causes about 86% of it and both rules pay that equally, while the
+rules differ only in what their trunk updates add. The nearest thing to an explanation is
+negative: the residual needs the feedback matrix to be *unrelated to the forward path*, not
+merely fixed. A frozen copy of the initial forward weights lands on the plasticity curve
+with no residual at all.
+
+**Then the generalisation test saturated.** Widening the output head to ten units and
+running class-incremental, the third protocol in the standard taxonomy and deliberately
+out of scope until now, produced a ceiling effect exactly mirroring the floor effect that
+forced Amendment 1. Every arm learns every task at 98.5% and then forgets essentially all
+of it: 98.7 pp forgetting, 19.3% final accuracy, four arms spanning 0.22 pp against a
+possible 99 ([`docs/exploratory-class-incremental.md`](docs/exploratory-class-incremental.md)).
+
+So the finding is confined to one window:
+
+> The untied rule's advantage exists in domain-incremental Split-MNIST, which is the only
+> one of the three standard protocols with measurement room at this architecture and
+> budget. Task-incremental leaves nothing to forget; class-incremental leaves nothing to
+> retain.
+
+An effect visible through only one window is not thereby false, but it cannot be resolved
+from inside this project. Relieving the ceiling needs more data, more capacity and a
+retuned budget, which would break the frozen identical-tuning-budget discipline that makes
+the original comparison trustworthy in the first place. That is a larger experiment, not a
+continuation of this one.
+
+**The project stops here**, with the effect measured, its scope stated, its mechanism
+unfound, and the four eliminated explanations left on record for anyone who picks it up.
 ## Why the network forgets: collapse onto the last task's rule
 
 Forgetting is uneven across tasks: 89.5 pp for 4v5, 15.9 pp for 6v7 in the backprop run
@@ -322,6 +362,7 @@ docs/limits.md                 which theorem needs which limit, and the measured
 docs/preregistration.md        the frozen design, with its two amendments
 docs/exploratory-gamma.md      the γ sweep
 docs/exploratory-untied.md     the untied-feedback follow-up
+docs/exploratory-class-incremental.md  the generalisation test that saturated
 docs/exploratory-plasticity.md is the untied result just lower plasticity?
 forgetlab/layers.py            the settling network (tied or untied feedback)
 forgetlab/rules/               backprop (reference), CHL
