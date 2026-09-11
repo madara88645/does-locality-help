@@ -34,5 +34,3 @@ uv run python experiments/analyse_forgetting.py
 ```
 
 The commands above are reproduction instructions, not claims that they were freshly run for this summary. The repository is released under the [MIT License](LICENSE).
-
-This was AI-assisted research: language models supported implementation, analysis and writing. Detailed records, including failed hypotheses and limitations, are retained for inspection.
